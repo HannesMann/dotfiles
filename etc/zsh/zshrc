@@ -2,8 +2,8 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-ZSH=/usr/share/oh-my-zsh/
-ZSH_CUSTOM=/usr/local/share/oh-my-zsh/
+ZSH=/usr/share/oh-my-zsh
+ZSH_CUSTOM=/usr/local/share/oh-my-zsh/custom
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -71,7 +71,7 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git gitignore encode64 extract copypath copyfile colored-man-pages zsh-syntax-highlighting)
+plugins=(git gitignore encode64 extract copypath copyfile colored-man-pages)
 
 
 # User configuration
@@ -106,3 +106,4 @@ if [[ ! -d $ZSH_CACHE_DIR ]]; then
 fi
 
 source $ZSH/oh-my-zsh.sh
+source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
