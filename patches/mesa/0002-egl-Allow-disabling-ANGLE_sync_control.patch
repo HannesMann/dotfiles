@@ -1,0 +1,57 @@
+From 162629dc237f002b4d04f9755cd4006df0628fdd Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Sat, 25 Feb 2023 02:15:01 +0100
+Subject: [PATCH 2/2] egl: Allow disabling ANGLE_sync_control
+
+---
+ src/egl/drivers/dri2/platform_x11.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/src/egl/drivers/dri2/platform_x11.c b/src/egl/drivers/dri2/platform_x11.c
+index 0a4889c..4b65a98 100644
+--- a/src/egl/drivers/dri2/platform_x11.c
++++ b/src/egl/drivers/dri2/platform_x11.c
+@@ -1567,15 +1567,15 @@ dri2_initialize_x11_swrast(_EGLDisplay *disp)
+       if (dri2_dpy->fd_render_gpu == dri2_dpy->fd_display_gpu)
+          disp->Extensions.KHR_image_pixmap = EGL_TRUE;
+       disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
+-      disp->Extensions.CHROMIUM_sync_control = EGL_TRUE;
+-      disp->Extensions.ANGLE_sync_control_rate = EGL_TRUE;
++      disp->Extensions.CHROMIUM_sync_control = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
++      disp->Extensions.ANGLE_sync_control_rate = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
+       disp->Extensions.EXT_buffer_age = EGL_TRUE;
+       disp->Extensions.EXT_swap_buffers_with_damage = EGL_TRUE;
+ 
+       //dri2_set_WL_bind_wayland_display(disp);
+    } else {
+       /* swrast */
+-      disp->Extensions.ANGLE_sync_control_rate = EGL_TRUE;
++      disp->Extensions.ANGLE_sync_control_rate = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
+    }
+ 
+    if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp, !disp->Options.Zink))
+@@ -1653,8 +1653,8 @@ dri2_initialize_x11_dri3(_EGLDisplay *disp)
+    if (dri2_dpy->fd_render_gpu == dri2_dpy->fd_display_gpu)
+       disp->Extensions.KHR_image_pixmap = EGL_TRUE;
+    disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
+-   disp->Extensions.CHROMIUM_sync_control = EGL_TRUE;
+-   disp->Extensions.ANGLE_sync_control_rate = EGL_TRUE;
++   disp->Extensions.CHROMIUM_sync_control = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
++   disp->Extensions.ANGLE_sync_control_rate = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
+    disp->Extensions.EXT_buffer_age = EGL_TRUE;
+    disp->Extensions.EXT_swap_buffers_with_damage = EGL_TRUE;
+ 
+@@ -1770,8 +1770,8 @@ dri2_initialize_x11_dri2(_EGLDisplay *disp)
+    disp->Extensions.NOK_swap_region = EGL_TRUE;
+    disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
+    disp->Extensions.NV_post_sub_buffer = EGL_TRUE;
+-   disp->Extensions.CHROMIUM_sync_control = EGL_TRUE;
+-   disp->Extensions.ANGLE_sync_control_rate = EGL_TRUE;
++   disp->Extensions.CHROMIUM_sync_control = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
++   disp->Extensions.ANGLE_sync_control_rate = !getenv("mesa_no_sync_control") || !!strcmp(getenv("mesa_no_sync_control"), "true");
+ 
+    dri2_set_WL_bind_wayland_display(disp);
+ 
+-- 
+2.39.2
+

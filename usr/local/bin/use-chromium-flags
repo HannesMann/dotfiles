@@ -1,0 +1,7 @@
+#!/bin/bash
+if [[ "$(basename $0)" == "apply-chromium-flags" ]]; then
+	echo "Script should be invoked through a symlink"
+	exit 1
+fi
+
+"/usr/bin/$(basename $0)" "$(parse-chromium-flags)" "$@"

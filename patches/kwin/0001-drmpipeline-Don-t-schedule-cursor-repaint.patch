@@ -1,0 +1,40 @@
+From 2c72e1fa29b206f1c7d366ab0d55824cf59681ab Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Mon, 20 Feb 2023 03:51:01 +0100
+Subject: [PATCH] drmpipeline: Don't schedule cursor repaint
+
+---
+ src/backends/drm/drm_pipeline.cpp | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/backends/drm/drm_pipeline.cpp b/src/backends/drm/drm_pipeline.cpp
+index a069abcfd7..d81ef56909 100644
+--- a/src/backends/drm/drm_pipeline.cpp
++++ b/src/backends/drm/drm_pipeline.cpp
+@@ -425,9 +425,9 @@ bool DrmPipeline::setCursor(const QPoint &hotspot)
+     // explicitly check for the cursor plane and not for AMS, as we might not always have one
+     if (m_pending.crtc->cursorPlane()) {
+         result = commitPipelines({this}, CommitMode::Test) == Error::None;
+-        if (result && m_output) {
++        /* if (result && m_output) {
+             m_output->renderLoop()->scheduleRepaint();
+-        }
++        } */
+     } else {
+         result = setCursorLegacy();
+     }
+@@ -450,9 +450,9 @@ bool DrmPipeline::moveCursor()
+     }
+     if (result) {
+         m_next = m_pending;
+-        if (m_output) {
++        /* if (m_output) {
+             m_output->renderLoop()->scheduleRepaint();
+-        }
++        } */
+     } else {
+         m_pending = m_next;
+     }
+-- 
+2.40.0
+

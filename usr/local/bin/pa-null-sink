@@ -1,0 +1,34 @@
+#!/bin/bash
+stty -echoctl
+trap ctrl_c INT
+
+function ctrl_c() {
+	echo ""
+	echo "** Trapped CTRL-C"
+	
+	if pidof obs > /dev/null; then
+	    echo "Waiting for OBS to close..."
+	    tail --pid=$(pidof obs) -f /dev/null
+	fi 
+	
+	pactl unload-module $loopback_id
+	pactl unload-module $null_sink_id
+
+	echo "Deleted loopback_id=$loopback_id null_sink_id=$null_sink_id"
+	exit 0
+}
+
+random_key=$(printf "$RANDOM" | md5sum | head -c6)
+echo "Key: $random_key"
+
+sink="null-$random_key"
+null_sink_id=$(pactl load-module module-null-sink sink_name=$sink format=s32le rate=48000 channels=2)
+pacmd update-sink-proplist $sink device.description="\"Sink $random_key\""
+
+loopback_id=$(pactl load-module module-loopback latency_msec=1 source=$sink.monitor)
+
+echo "loopback_id=$loopback_id null_sink_id=$null_sink_id"
+echo ""
+echo "Press CTRL+C to delete Sink $random_key..."
+
+sleep infinity

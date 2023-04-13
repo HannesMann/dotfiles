@@ -1,0 +1,5 @@
+#!/bin/bash
+export QT_QPA_PLATFORM=xcb
+
+echo -n obs-vk-wrapper > /proc/$$/comm
+vk_pro /usr/bin/obs
