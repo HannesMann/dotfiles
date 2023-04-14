@@ -8,7 +8,8 @@ ln -sf "/usr/local/bin/use-chromium-flags" "/usr/local/bin/$1"
 echo "Creating desktop file /usr/local/share/applications/$2.desktop"
 mkdir -p /usr/local/share/applications
 cp "/usr/share/applications/$2.desktop" "/usr/local/share/applications/$2.desktop"
-sed -i -e "s/\\/usr\\/bin\\/$1/\\/usr\\/bin\\/local\\/$1/g" "/usr/local/share/applications/$2.desktop"
+sed -i -e "s/\\/usr\\/bin\\/$1/\\/usr\\/local\\/bin\\/$1/g" "/usr/local/share/applications/$2.desktop"
+sed -i -e "s/Path=\\/usr\\/bin/Path=\\/usr\\/local\\/bin/g" "/usr/local/share/applications/$2.desktop"
 
 if grep -q "/opt/" "/usr/local/share/applications/$2.desktop"; then
 	echo "Warning: Desktop file contains reference to /opt"

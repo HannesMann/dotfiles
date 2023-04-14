@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/bin/discord
+
+[Action]
+Description = Updating Discord command line wrapper...
+When = PostTransaction
+Exec = /bin/bash -c '/usr/local/bin/update-chromium-app-wrapper discord discord'
