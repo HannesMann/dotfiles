@@ -4,4 +4,4 @@ if [[ "$(basename $0)" == "apply-chromium-flags" ]]; then
 	exit 1
 fi
 
-"/usr/bin/$(basename $0)" "$(parse-chromium-flags)" "$@"
+"/usr/bin/$(basename $0)" $(parse-chromium-flags) "$@"

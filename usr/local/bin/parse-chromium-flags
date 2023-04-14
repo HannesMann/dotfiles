@@ -12,4 +12,5 @@ if [[ ! -z $line && $line != '#'* ]]; then
 	result="$result $line"
 fi
 
+result=$(echo -n $result | xargs)
 echo -n "$result"

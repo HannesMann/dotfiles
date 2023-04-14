@@ -2,11 +2,13 @@
 # Argument 1: Name of binary
 # Argument 2: Name of desktop file
 echo "Creating wrapper /usr/local/bin/$1"
-ln -s "/usr/local/bin/use-chromium-flags" "/usr/local/bin/$1"
+mkdir -p /usr/local/bin
+ln -sf "/usr/local/bin/use-chromium-flags" "/usr/local/bin/$1"
 
 echo "Creating desktop file /usr/local/share/applications/$2.desktop"
+mkdir -p /usr/local/share/applications
 cp "/usr/share/applications/$2.desktop" "/usr/local/share/applications/$2.desktop"
-sed -i -e "s/\\/usr\\/bin\\/$1" "s/\\/usr\\/bin\\/local\\/$1" "/usr/local/share/applications/$2.desktop"
+sed -i -e "s/\\/usr\\/bin\\/$1/\\/usr\\/bin\\/local\\/$1/g" "/usr/local/share/applications/$2.desktop"
 
 if grep -q "/opt/" "/usr/local/share/applications/$2.desktop"; then
 	echo "Warning: Desktop file contains reference to /opt"
