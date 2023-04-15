@@ -1,6 +1,7 @@
 #!/bin/bash
 # Argument 1: Name of binary
 # Argument 2: Name of desktop file
+
 echo "Creating wrapper /usr/local/bin/$1"
 mkdir -p /usr/local/bin
 ln -sf "/usr/local/bin/use-chromium-flags" "/usr/local/bin/$1"

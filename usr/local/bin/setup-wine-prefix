@@ -1,0 +1,38 @@
+#!/bin/bash
+while read line; do
+	if [[ ! -z $line && $line != '#'* ]]; then
+		line=$(echo -n $line | xargs)
+
+		echo "Installing $line..."
+		echo ""
+
+		winetricks --force -q $line || { echo "Installation of '$line' failed" ; exit 1; }
+
+		echo ""
+	fi
+done < /etc/default-wine-install.conf
+
+# Last line
+if [[ ! -z $line && $line != '#'* ]]; then
+	line=$(echo -n $line | xargs)
+
+	echo "Installing $line..."
+	echo ""
+
+	winetricks --force -q $line || { echo "Installation of '$line' failed" ; exit 1; }
+
+	echo ""
+fi
+
+wineserver -p
+
+setup_dxvk install
+setup_vkd3d_proton install
+
+wine reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v "d3d6" /d native,builtin /f
+wine reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v "d3d7" /d native,builtin /f
+wine reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v "d3d8" /d native,builtin /f
+
+winetricks $1 --force -q win10
+
+wineserver -k

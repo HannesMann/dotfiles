@@ -1,0 +1,27 @@
+#!/bin/bash
+while read line; do
+	if [[ ! -z $line && $line != '#'* ]]; then
+		line=$(echo -n $line | xargs)
+
+		echo "Installing $line..."
+		echo ""
+
+		protontricks $1 --force -q $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
+
+		echo ""
+	fi
+done < /etc/default-wine-install.conf
+
+# Last line
+if [[ ! -z $line && $line != '#'* ]]; then
+	line=$(echo -n $line | xargs)
+
+	echo "Installing $line..."
+	echo ""
+
+	protontricks $1 --force -q $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
+
+	echo ""
+fi
+
+protontricks $1 --force -q win10
