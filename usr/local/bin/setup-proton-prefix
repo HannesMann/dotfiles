@@ -1,4 +1,7 @@
 #!/bin/bash
+export WINE=$(which wine)
+export WINESERVER=$(which wineserver)
+
 while read line; do
 	if [[ ! -z $line && $line != '#'* ]]; then
 		line=$(echo -n $line | xargs)
@@ -6,7 +9,7 @@ while read line; do
 		echo "Installing $line..."
 		echo ""
 
-		protontricks $1 --force -q $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
+		protontricks --no-runtime --no-bwrap $1 -q --force $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
 
 		echo ""
 	fi
@@ -19,9 +22,9 @@ if [[ ! -z $line && $line != '#'* ]]; then
 	echo "Installing $line..."
 	echo ""
 
-	protontricks $1 --force -q $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
+	protontricks --no-runtime --no-bwrap $1 -q --force $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
 
 	echo ""
 fi
 
-protontricks $1 --force -q win10
+protontricks --no-runtime --no-bwrap $1 --force -q win10
