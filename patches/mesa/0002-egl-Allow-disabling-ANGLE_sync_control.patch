@@ -1,7 +1,7 @@
 From 162629dc237f002b4d04f9755cd4006df0628fdd Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 25 Feb 2023 02:15:01 +0100
-Subject: [PATCH 2/2] egl: Allow disabling ANGLE_sync_control
+Subject: [PATCH 2/3] egl: Allow disabling ANGLE_sync_control
 
 ---
  src/egl/drivers/dri2/platform_x11.c | 14 +++++++-------

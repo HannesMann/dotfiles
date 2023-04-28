@@ -1,0 +1,55 @@
+From 92473c03ab26a60167a90aface52546f13d0f545 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Sun, 16 Apr 2023 00:35:08 +0200
+Subject: [PATCH 3/3] spirv: Hack to make ENB work
+
+---
+ src/compiler/spirv/spirv_to_nir.c | 27 +++++++++++++--------------
+ 1 file changed, 13 insertions(+), 14 deletions(-)
+
+diff --git a/src/compiler/spirv/spirv_to_nir.c b/src/compiler/spirv/spirv_to_nir.c
+index 9f2e91b5a3b..185f55f766b 100644
+--- a/src/compiler/spirv/spirv_to_nir.c
++++ b/src/compiler/spirv/spirv_to_nir.c
+@@ -4021,25 +4021,24 @@ vtn_composite_insert(struct vtn_builder *b, struct vtn_ssa_value *src,
+        */
+       vtn_fail_if(glsl_type_is_vector_or_scalar(cur->type),
+                   "OpCompositeInsert has too many indices.");
+-      vtn_fail_if(indices[i] >= glsl_get_length(cur->type),
+-                  "All indices in an OpCompositeInsert must be in-bounds");
+-      cur = cur->elems[indices[i]];
++      if(indices[i] < glsl_get_length(cur->type)) {
++         cur = cur->elems[indices[i]];
++      }
+    }
+ 
+    if (glsl_type_is_vector_or_scalar(cur->type)) {
+-      vtn_fail_if(indices[i] >= glsl_get_vector_elements(cur->type),
+-                  "All indices in an OpCompositeInsert must be in-bounds");
++      if(indices[i] < glsl_get_vector_elements(cur->type)) {
++         /* According to the SPIR-V spec, OpCompositeInsert may work down to
++         * the component granularity. In that case, the last index will be
++         * the index to insert the scalar into the vector.
++         */
+ 
+-      /* According to the SPIR-V spec, OpCompositeInsert may work down to
+-       * the component granularity. In that case, the last index will be
+-       * the index to insert the scalar into the vector.
+-       */
+-
+-      cur->def = nir_vector_insert_imm(&b->nb, cur->def, insert->def, indices[i]);
++         cur->def = nir_vector_insert_imm(&b->nb, cur->def, insert->def, indices[i]);
++      }
+    } else {
+-      vtn_fail_if(indices[i] >= glsl_get_length(cur->type),
+-                  "All indices in an OpCompositeInsert must be in-bounds");
+-      cur->elems[indices[i]] = insert;
++     if(indices[i] < glsl_get_length(cur->type)) {
++        cur->elems[indices[i]] = insert;
++     }
+    }
+ 
+    return dest;
+-- 
+2.40.1
+
