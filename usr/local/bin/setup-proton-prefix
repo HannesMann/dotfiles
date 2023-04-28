@@ -1,4 +1,23 @@
 #!/bin/bash
+cp /etc/default-wine-install.conf /tmp/user-wine-install.conf
+trap "rm /tmp/user-wine-install.conf" EXIT
+
+"${EDITOR:-nano}" /tmp/user-wine-install.conf
+echo "" >> /tmp/user-wine-install.conf
+
+echo "Proceed with: "
+while read line; do
+	if [[ ! -z $line && $line != '#'* ]]; then
+		echo "  $line"
+	fi
+done < /tmp/user-wine-install.conf
+
+read -p "Y/N? " yn
+case $yn in
+	[Yy]* ) break;;
+	* ) exit;;
+esac
+
 export WINE=$(which wine)
 export WINESERVER=$(which wineserver)
 
@@ -13,18 +32,6 @@ while read line; do
 
 		echo ""
 	fi
-done < /etc/default-wine-install.conf
-
-# Last line
-if [[ ! -z $line && $line != '#'* ]]; then
-	line=$(echo -n $line | xargs)
-
-	echo "Installing $line..."
-	echo ""
-
-	protontricks --no-runtime --no-bwrap $1 -q --force $line || { echo "Installation of '$line' failed for game $1" ; exit 1; }
-
-	echo ""
-fi
+done < /tmp/user-wine-install.conf
 
 protontricks --no-runtime --no-bwrap $1 --force -q win10
