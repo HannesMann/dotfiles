@@ -5,6 +5,7 @@
       <option name="vblank_mode" value="1" />
       <option name="vk_xwayland_wait_ready" value="false" />
       <option name="block_on_depleted_buffers" value="true" />
+      <option name="vk_khr_present_wait" value="true" />
     </application>
     <application name="Brave" executable="brave">
       <option name="vblank_mode" value="0" />
