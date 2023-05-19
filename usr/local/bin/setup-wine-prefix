@@ -14,7 +14,7 @@ done < /tmp/user-wine-install.conf
 
 read -p "Y/N? " yn
 case $yn in
-	[Yy]* ) break;;
+	[Yy]* ) ;;
 	* ) exit;;
 esac
 
