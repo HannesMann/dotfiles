@@ -1,4 +1,4 @@
-From 92473c03ab26a60167a90aface52546f13d0f545 Mon Sep 17 00:00:00 2001
+From 3ca44f972b3cc47ce87acc901c4865680f73d498 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sun, 16 Apr 2023 00:35:08 +0200
 Subject: [PATCH 3/3] spirv: Hack to make ENB work
@@ -8,10 +8,10 @@ Subject: [PATCH 3/3] spirv: Hack to make ENB work
  1 file changed, 13 insertions(+), 14 deletions(-)
 
 diff --git a/src/compiler/spirv/spirv_to_nir.c b/src/compiler/spirv/spirv_to_nir.c
-index 9f2e91b5a3b..185f55f766b 100644
+index 68c3b43dba8..26b3f1230a3 100644
 --- a/src/compiler/spirv/spirv_to_nir.c
 +++ b/src/compiler/spirv/spirv_to_nir.c
-@@ -4021,25 +4021,24 @@ vtn_composite_insert(struct vtn_builder *b, struct vtn_ssa_value *src,
+@@ -4102,25 +4102,24 @@ vtn_composite_insert(struct vtn_builder *b, struct vtn_ssa_value *src,
         */
        vtn_fail_if(glsl_type_is_vector_or_scalar(cur->type),
                    "OpCompositeInsert has too many indices.");

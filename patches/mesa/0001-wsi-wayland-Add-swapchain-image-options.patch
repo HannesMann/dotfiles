@@ -1,6 +1,6 @@
-From 487130fed8324a9fe37b2fd9dacd7313ad1c0f3b Mon Sep 17 00:00:00 2001
+From ebd91655454ea93cbe040a2ce97337247ce0103e Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
-Date: Sat, 25 Mar 2023 02:14:43 +0100
+Date: Fri, 19 May 2023 02:39:25 +0200
 Subject: [PATCH 1/3] wsi/wayland: Add swapchain image options
 
 ---
@@ -16,7 +16,7 @@ Subject: [PATCH 1/3] wsi/wayland: Add swapchain image options
  9 files changed, 83 insertions(+), 14 deletions(-)
 
 diff --git a/src/amd/vulkan/radv_instance.c b/src/amd/vulkan/radv_instance.c
-index 14aa0c983ca..1782893dbb8 100644
+index f1e23ee1a6a..1a91ff94df9 100644
 --- a/src/amd/vulkan/radv_instance.c
 +++ b/src/amd/vulkan/radv_instance.c
 @@ -117,6 +117,9 @@ static const driOptionDescription radv_dri_options[] = {
@@ -30,7 +30,7 @@ index 14aa0c983ca..1782893dbb8 100644
        DRI_CONF_VK_XWAYLAND_WAIT_READY(true)
        DRI_CONF_RADV_REPORT_LLVM9_VERSION_STRING(false)
 diff --git a/src/intel/vulkan/anv_device.c b/src/intel/vulkan/anv_device.c
-index 022cd53700a..09512089619 100644
+index 8dc7bead42f..0b89ce0fa63 100644
 --- a/src/intel/vulkan/anv_device.c
 +++ b/src/intel/vulkan/anv_device.c
 @@ -69,6 +69,8 @@ static const driOptionDescription anv_dri_options[] = {
@@ -43,7 +43,7 @@ index 022cd53700a..09512089619 100644
        DRI_CONF_VK_XWAYLAND_WAIT_READY(true)
        DRI_CONF_ANV_ASSUME_FULL_SUBGROUPS(false)
 diff --git a/src/intel/vulkan_hasvk/anv_device.c b/src/intel/vulkan_hasvk/anv_device.c
-index 5775a0dd60f..1999f98bb4c 100644
+index af4d759a2aa..e7810eec7b5 100644
 --- a/src/intel/vulkan_hasvk/anv_device.c
 +++ b/src/intel/vulkan_hasvk/anv_device.c
 @@ -66,6 +66,8 @@ static const driOptionDescription anv_dri_options[] = {
@@ -56,7 +56,7 @@ index 5775a0dd60f..1999f98bb4c 100644
        DRI_CONF_ANV_ASSUME_FULL_SUBGROUPS(false)
        DRI_CONF_ANV_SAMPLE_MASK_OUT_OPENGL_BEHAVIOUR(false)
 diff --git a/src/util/driconf.h b/src/util/driconf.h
-index c5de0c1ad58..c239abcd855 100644
+index d1a000e2d77..6a0ef20b28b 100644
 --- a/src/util/driconf.h
 +++ b/src/util/driconf.h
 @@ -382,7 +382,7 @@
@@ -88,7 +88,7 @@ index c5de0c1ad58..c239abcd855 100644
     DRI_CONF_OPT_B(vk_khr_present_wait, def, \
                    "Expose VK_KHR_present_wait and id extensions despite them not being implemented for all supported surface types")
 diff --git a/src/virtio/vulkan/vn_instance.c b/src/virtio/vulkan/vn_instance.c
-index ad0b9bf3850..41c0343ce45 100644
+index 233a2614132..2f8ff7068ea 100644
 --- a/src/virtio/vulkan/vn_instance.c
 +++ b/src/virtio/vulkan/vn_instance.c
 @@ -58,6 +58,9 @@ static const driOptionDescription vn_dri_options[] = {
@@ -156,18 +156,18 @@ index fd4d8482288..1f08765316c 100644
                         const VkAllocationCallbacks *alloc);
  VkResult wsi_win32_init_wsi(struct wsi_device *wsi_device,
 diff --git a/src/vulkan/wsi/wsi_common_wayland.c b/src/vulkan/wsi/wsi_common_wayland.c
-index 154d1278c7a..8be7a295ec2 100644
+index c6f70f458ce..0e2927df417 100644
 --- a/src/vulkan/wsi/wsi_common_wayland.c
 +++ b/src/vulkan/wsi/wsi_common_wayland.c
-@@ -50,6 +50,7 @@
- #include <util/u_vector.h>
+@@ -52,6 +52,7 @@
  #include <util/u_dynarray.h>
  #include <util/anon_file.h>
+ #include <util/os_time.h>
 +#include <util/xmlconfig.h>
  
  #ifdef MAJOR_IN_MKDEV
  #include <sys/mkdev.h>
-@@ -964,8 +965,11 @@ static const VkPresentModeKHR present_modes[] = {
+@@ -1015,8 +1016,11 @@ static const VkPresentModeKHR present_modes[] = {
  };
  
  static uint32_t
@@ -180,7 +180,7 @@ index 154d1278c7a..8be7a295ec2 100644
     if (present_mode && (present_mode->presentMode == VK_PRESENT_MODE_FIFO_KHR ||
                          present_mode->presentMode == VK_PRESENT_MODE_FIFO_RELAXED_KHR)) {
        /* If we receive a FIFO present mode, only 2 images is required for forward progress.
-@@ -974,23 +978,22 @@ wsi_wl_surface_get_min_image_count(const VkSurfacePresentModeEXT *present_mode)
+@@ -1025,23 +1029,22 @@ wsi_wl_surface_get_min_image_count(const VkSurfacePresentModeEXT *present_mode)
         * Other ICDs expose 2 images here already. */
         return 2;
     } else {
@@ -210,7 +210,7 @@ index 154d1278c7a..8be7a295ec2 100644
     }
  
     uint32_t max_required = 0;
-@@ -1000,7 +1003,7 @@ wsi_wl_surface_get_min_image_count_for_mode_group(const VkSwapchainPresentModesC
+@@ -1051,7 +1054,7 @@ wsi_wl_surface_get_min_image_count_for_mode_group(const VkSwapchainPresentModesC
           NULL,
           modes->pPresentModes[i]
        };
@@ -219,7 +219,7 @@ index 154d1278c7a..8be7a295ec2 100644
     }
  
     return max_required;
-@@ -1012,7 +1015,7 @@ wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
+@@ -1063,7 +1066,7 @@ wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
                                  const VkSurfacePresentModeEXT *present_mode,
                                  VkSurfaceCapabilitiesKHR* caps)
  {
@@ -228,7 +228,7 @@ index 154d1278c7a..8be7a295ec2 100644
     /* There is no real maximum */
     caps->maxImageCount = 0;
  
-@@ -1882,6 +1885,17 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
+@@ -2200,6 +2203,17 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
     assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
  
     int num_images = pCreateInfo->minImageCount;
@@ -240,13 +240,13 @@ index 154d1278c7a..8be7a295ec2 100644
 +         .pNext = NULL,
 +         .presentMode = pCreateInfo->presentMode
 +      };
-+      
++
 +      num_images = MAX2(num_images, wsi_wl_surface_get_min_image_count(wsi_device, &presentMode));
 +   }
  
     size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
     chain = vk_zalloc(pAllocator, size, 8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-@@ -2015,7 +2029,8 @@ fail:
+@@ -2349,7 +2363,8 @@ fail:
  VkResult
  wsi_wl_init_wsi(struct wsi_device *wsi_device,
                  const VkAllocationCallbacks *alloc,
@@ -256,7 +256,7 @@ index 154d1278c7a..8be7a295ec2 100644
  {
     struct wsi_wayland *wsi;
     VkResult result;
-@@ -2031,6 +2046,21 @@ wsi_wl_init_wsi(struct wsi_device *wsi_device,
+@@ -2365,6 +2380,21 @@ wsi_wl_init_wsi(struct wsi_device *wsi_device,
     wsi->alloc = alloc;
     wsi->wsi = wsi_device;
  
@@ -279,5 +279,5 @@ index 154d1278c7a..8be7a295ec2 100644
     wsi->base.get_capabilities2 = wsi_wl_surface_get_capabilities2;
     wsi->base.get_formats = wsi_wl_surface_get_formats;
 -- 
-2.40.0
+2.40.1
 

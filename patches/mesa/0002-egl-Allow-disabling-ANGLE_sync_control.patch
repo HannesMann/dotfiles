@@ -1,4 +1,4 @@
-From 162629dc237f002b4d04f9755cd4006df0628fdd Mon Sep 17 00:00:00 2001
+From f81cbd4294bf6b7d9a519a05cc6bc244d30953ca Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 25 Feb 2023 02:15:01 +0100
 Subject: [PATCH 2/3] egl: Allow disabling ANGLE_sync_control
@@ -8,7 +8,7 @@ Subject: [PATCH 2/3] egl: Allow disabling ANGLE_sync_control
  1 file changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/src/egl/drivers/dri2/platform_x11.c b/src/egl/drivers/dri2/platform_x11.c
-index 0a4889c..4b65a98 100644
+index 917c82bdeb2..39f53d71031 100644
 --- a/src/egl/drivers/dri2/platform_x11.c
 +++ b/src/egl/drivers/dri2/platform_x11.c
 @@ -1567,15 +1567,15 @@ dri2_initialize_x11_swrast(_EGLDisplay *disp)
@@ -53,5 +53,5 @@ index 0a4889c..4b65a98 100644
     dri2_set_WL_bind_wayland_display(disp);
  
 -- 
-2.39.2
+2.40.1
 
