@@ -1,41 +1,113 @@
-From b68298e055c5e1ef352c31970b66f98c61690b89 Mon Sep 17 00:00:00 2001
+From 92fb48a799606c8935926091c5f5cca064369e37 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
-Date: Tue, 7 Mar 2023 03:55:46 +0100
-Subject: [PATCH] effects: Don't animate internal windows
+Date: Fri, 23 Jun 2023 00:51:16 +0200
+Subject: [PATCH 2/2] effects: Don't animate internal windows
 
 ---
- src/effects/glide/glide.cpp                     | 3 ++-
- src/effects/scale/package/contents/code/main.js | 3 ++-
- 2 files changed, 4 insertions(+), 2 deletions(-)
+ src/effects.cpp                                 | 10 ++++++++++
+ src/effects.h                                   |  3 +++
+ src/effects/glide/glide.cpp                     |  3 ++-
+ src/effects/scale/package/contents/code/main.js |  3 ++-
+ src/libkwineffects/kwineffects.h                |  2 ++
+ 5 files changed, 19 insertions(+), 2 deletions(-)
 
+diff --git a/src/effects.cpp b/src/effects.cpp
+index 0c4005471d..bc4be91e6f 100644
+--- a/src/effects.cpp
++++ b/src/effects.cpp
+@@ -2011,6 +2011,8 @@ EffectWindowImpl::EffectWindowImpl(Window *window)
+ 
+     m_waylandWindow = qobject_cast<KWin::WaylandWindow *>(window) != nullptr;
+     m_x11Window = qobject_cast<KWin::X11Window *>(window) != nullptr || qobject_cast<KWin::Unmanaged *>(window) != nullptr;
++
++    m_wasInternal = m_wasInternal || internalWindow() != nullptr;
+ }
+ 
+ EffectWindowImpl::~EffectWindowImpl()
+@@ -2252,6 +2254,14 @@ QWindow *EffectWindowImpl::internalWindow() const
+     return nullptr;
+ }
+ 
++bool EffectWindowImpl::isInternalCached()
++{
++    if (!m_wasInternal) {
++        m_wasInternal = internalWindow() != nullptr;
++    }
++    return m_wasInternal;
++}
++
+ template<typename T>
+ EffectWindowList getMainWindows(T *c)
+ {
+diff --git a/src/effects.h b/src/effects.h
+index 81db4aec5a..a5fecbe657 100644
+--- a/src/effects.h
++++ b/src/effects.h
+@@ -491,6 +491,7 @@ public:
+     void unreferencePreviousWindowPixmap() override;
+ 
+     QWindow *internalWindow() const override;
++    bool isInternalCached() override;
+ 
+     const Window *window() const;
+     Window *window();
+@@ -514,6 +515,8 @@ private:
+     bool managed = false;
+     bool m_waylandWindow;
+     bool m_x11Window;
++
++    bool m_wasInternal = false;
+ };
+ 
+ class EffectWindowGroupImpl
 diff --git a/src/effects/glide/glide.cpp b/src/effects/glide/glide.cpp
-index a17e30d75c..15aaec1c85 100644
+index 5f56e41474..6720980289 100644
 --- a/src/effects/glide/glide.cpp
 +++ b/src/effects/glide/glide.cpp
-@@ -309,7 +309,8 @@ bool GlideEffect::isGlideWindow(EffectWindow *w) const
+@@ -312,7 +312,8 @@ bool GlideEffect::isGlideWindow(EffectWindow *w) const
      // to use a heuristic: if a window has decoration, then it's most
      // likely a dialog or a settings window so we have to animate it.
      if (w->windowClass() == QLatin1String("plasmashell plasmashell")
 -        || w->windowClass() == QLatin1String("plasmashell org.kde.plasmashell")) {
 +        || w->windowClass() == QLatin1String("plasmashell org.kde.plasmashell")
-+        || w->internalWindow()) {
++        || w->isInternalCached()) {
          return w->hasDecoration();
      }
  
 diff --git a/src/effects/scale/package/contents/code/main.js b/src/effects/scale/package/contents/code/main.js
-index eb97629b0e..0a65a3b1ab 100644
+index 32a3b2e652..74f79b5e97 100644
 --- a/src/effects/scale/package/contents/code/main.js
 +++ b/src/effects/scale/package/contents/code/main.js
-@@ -45,7 +45,8 @@ class ScaleEffect {
+@@ -49,7 +49,8 @@ class ScaleEffect {
          // to use a heuristic: if a window has decoration, then it's most
          // likely a dialog or a settings window so we have to animate it.
          if (window.windowClass == "plasmashell plasmashell"
 -                || window.windowClass == "plasmashell org.kde.plasmashell") {
 +                || window.windowClass == "plasmashell org.kde.plasmashell"
-+                || window.internalWindow !== null) {
++                || window.internalCached) {
              return window.hasDecoration;
          }
  
+diff --git a/src/libkwineffects/kwineffects.h b/src/libkwineffects/kwineffects.h
+index 936a0aa144..cdce2e9869 100644
+--- a/src/libkwineffects/kwineffects.h
++++ b/src/libkwineffects/kwineffects.h
+@@ -2329,6 +2329,7 @@ class KWINEFFECTS_EXPORT EffectWindow : public QObject
+      * @since 5.16
+      */
+     Q_PROPERTY(QWindow *internalWindow READ internalWindow CONSTANT)
++    Q_PROPERTY(bool internalCached READ isInternalCached)
+ 
+     /**
+      * Whether this EffectWindow represents the outline.
+@@ -2666,6 +2667,7 @@ public:
+      * @since 5.16
+      */
+     virtual QWindow *internalWindow() const = 0;
++    virtual bool isInternalCached() = 0;
+ 
+     /**
+      * @since 5.16
 -- 
-2.40.0
+2.41.0
 

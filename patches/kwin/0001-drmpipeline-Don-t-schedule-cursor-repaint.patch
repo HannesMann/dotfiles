@@ -1,17 +1,17 @@
-From 2c72e1fa29b206f1c7d366ab0d55824cf59681ab Mon Sep 17 00:00:00 2001
+From 001f536215e9731ff6cda73303d562e3a7efee80 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Mon, 20 Feb 2023 03:51:01 +0100
-Subject: [PATCH] drmpipeline: Don't schedule cursor repaint
+Subject: [PATCH 1/2] drmpipeline: Don't schedule cursor repaint
 
 ---
  src/backends/drm/drm_pipeline.cpp | 8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/src/backends/drm/drm_pipeline.cpp b/src/backends/drm/drm_pipeline.cpp
-index a069abcfd7..d81ef56909 100644
+index d4a99f975b..f6c5d9549c 100644
 --- a/src/backends/drm/drm_pipeline.cpp
 +++ b/src/backends/drm/drm_pipeline.cpp
-@@ -425,9 +425,9 @@ bool DrmPipeline::setCursor(const QPoint &hotspot)
+@@ -442,9 +442,9 @@ bool DrmPipeline::setCursor(const QPoint &hotspot)
      // explicitly check for the cursor plane and not for AMS, as we might not always have one
      if (m_pending.crtc->cursorPlane()) {
          result = commitPipelines({this}, CommitMode::Test) == Error::None;
@@ -23,7 +23,7 @@ index a069abcfd7..d81ef56909 100644
      } else {
          result = setCursorLegacy();
      }
-@@ -450,9 +450,9 @@ bool DrmPipeline::moveCursor()
+@@ -467,9 +467,9 @@ bool DrmPipeline::moveCursor()
      }
      if (result) {
          m_next = m_pending;
@@ -36,5 +36,5 @@ index a069abcfd7..d81ef56909 100644
          m_pending = m_next;
      }
 -- 
-2.40.0
+2.41.0
 
