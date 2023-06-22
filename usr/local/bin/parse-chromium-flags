@@ -1,11 +1,22 @@
 #!/bin/bash
 result=""
 
+if [ -z "$1" ]; then
+	echo "parse-chromium-flags [file]"
+	echo "One parameter expected"
+	exit 1
+fi
+
+if [ ! -f "$1" ]; then
+	# Exit silently
+	exit 1
+fi
+
 while read line; do
 	if [[ ! -z $line && $line != '#'* ]]; then
 		result="$result $line"
 	fi
-done < /etc/chromium-flags.conf
+done < "$1"
 
 # Last line
 if [[ ! -z $line && $line != '#'* ]]; then

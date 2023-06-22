@@ -1,7 +1,28 @@
 #!/bin/bash
-if [[ "$(basename $0)" == "apply-chromium-flags" ]]; then
+if [[ "$(basename $0)" == "use-chromium-flags" ]]; then
 	echo "Script should be invoked through a symlink"
 	exit 1
 fi
 
-"/usr/bin/$(basename $0)" $(parse-chromium-flags) "$@"
+flags=$(parse-chromium-flags "/etc/chromium-flags.conf")
+extraflags=$(parse-chromium-flags "/etc/chromium-flags-$(basename $0).conf")
+
+arguments=$(echo "$flags" | grep -o ' ' | wc -l)
+extraarguments=$(echo "$extraflags" | grep -o ' ' | wc -l)
+
+# Only increase if there are any characters in /etc/chromium-flags*.conf
+if [ ! -z "$flags" ]; then
+	arguments=$((arguments+1))
+fi
+if [ ! -z "$extraflags" ]; then
+	extraarguments=$((extraarguments+1))
+fi
+
+echo "/etc/chromium-flags.conf: $arguments flag(s)"
+echo "/etc/chromium-flags-$(basename $0).conf: $extraarguments flag(s)"
+
+if [ ! -z "$extraflags" ]; then
+	flags="$flags $extraflags"
+fi
+
+"/usr/bin/$(basename $0)" $flags "$@"

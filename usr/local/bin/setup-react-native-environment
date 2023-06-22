@@ -3,3 +3,7 @@ export ANDROID_HOME=$HOME/.android/sdk
 export PATH=$PATH:$ANDROID_HOME/emulator
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 export JAVA_HOME=/opt/android-studio/jbr
+
+echo "ANDROID_HOME=$ANDROID_HOME"
+echo "PATH=$PATH"
+echo "JAVA_HOME=JAVA_HOME"
