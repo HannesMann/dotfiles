@@ -21,7 +21,6 @@ if [ ! $is_repo ]; then
 	exit 1
 fi
 
-echo "Base directory: $(git rev-parse --show-toplevel)"
 cd "$(git rev-parse --show-toplevel)"
 
 tmp_file="/tmp/$(echo $REMOTE_BASE | md5sum | head -c 32)-$1.patch"
@@ -31,10 +30,28 @@ if [ -f "$tmp_file" ]; then
 	mv "$tmp_file" "$1.patch"
 else
 	curl --progress-bar -o "$1.patch" "$REMOTE_BASE/$1.patch"
+
+	tput cuu1
+	tput el
 fi
+
+oldhead=$(git rev-parse HEAD)
 
 git apply --check "$1.patch" || (mv "$1.patch" "$tmp_file" && exit 1)
 git am "$1.patch" || (mv "$1.patch" "$tmp_file" && exit 1)
+
+# Applied successfully!
+git commit -q --author="$(git config user.name) apply-remote-pr <$(git config user.email)>" --allow-empty -m "checkpoint !$1
+$REMOTE_BASE
+
+$(git log $oldhead..HEAD --pretty=format:%s)
+
+To revert:
+$(git log $oldhead..HEAD --pretty='format:git revert %H')
+
+Or:
+git reset --hard $oldhead
+"
 
 rm "$1.patch"
 
