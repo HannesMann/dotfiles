@@ -29,7 +29,7 @@ if [ -f "$tmp_file" ]; then
 	echo "Using backup"
 	mv "$tmp_file" "$1.patch"
 else
-	curl --progress-bar -o "$1.patch" "$REMOTE_BASE/$1.patch"
+	curl --progress-bar -L -o "$1.patch" "$REMOTE_BASE/$1.patch"
 
 	tput cuu1
 	tput el
