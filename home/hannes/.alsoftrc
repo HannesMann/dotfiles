@@ -3,3 +3,4 @@ drivers = pipewire,pulse
 frequency = 48000
 period_size = 256
 periods = 2
+hrtf = false
