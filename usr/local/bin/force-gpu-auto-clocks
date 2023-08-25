@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "auto" | sudo tee /sys/class/drm/card0/device/power_dpm_force_performance_level
+echo "auto" | sudo tee /sys/class/drm/card*/device/power_dpm_force_performance_level
 sleep 1
-echo "manual" | sudo tee /sys/class/drm/card0/device/power_dpm_force_performance_level
-echo "1" | sudo tee /sys/class/drm/card0/device/pp_power_profile_mode
+echo "manual" | sudo tee /sys/class/drm/card*/device/power_dpm_force_performance_level
+echo "1" | sudo tee /sys/class/drm/card*/device/pp_power_profile_mode

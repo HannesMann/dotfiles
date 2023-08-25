@@ -1,4 +1,4 @@
-From 1029fcbcdda8573be541f94d63db3282495d1698 Mon Sep 17 00:00:00 2001
+From 1e5cabd965ad10f47e77d4a02220eaa1327bddc2 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 22 Jul 2023 00:06:37 +0200
 Subject: [PATCH 2/3] egl: Allow disabling ANGLE_sync_control
@@ -45,5 +45,5 @@ index 50e1333657e..25a021cc1d0 100644
     dri2_set_WL_bind_wayland_display(disp);
  
 -- 
-2.41.0
+2.42.0
 
