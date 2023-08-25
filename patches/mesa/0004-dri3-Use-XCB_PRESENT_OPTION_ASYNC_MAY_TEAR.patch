@@ -1,0 +1,39 @@
+From 21f18f10713687280cd58622f150eb007d13961e Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Sat, 26 Aug 2023 00:53:41 +0200
+Subject: [PATCH 4/4] dri3: Use XCB_PRESENT_OPTION_ASYNC_MAY_TEAR
+
+---
+ src/loader/loader_dri3_helper.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/loader/loader_dri3_helper.c b/src/loader/loader_dri3_helper.c
+index 32135770e9d..807b1aaee6d 100644
+--- a/src/loader/loader_dri3_helper.c
++++ b/src/loader/loader_dri3_helper.c
+@@ -40,6 +40,10 @@
+ #include "util/simple_mtx.h"
+ #include "drm-uapi/drm_fourcc.h"
+ 
++#ifndef XCB_PRESENT_OPTION_ASYNC_MAY_TEAR
++#define XCB_PRESENT_OPTION_ASYNC_MAY_TEAR 16
++#endif
++
+ /**
+  * A cached blit context.
+  */
+@@ -1132,8 +1136,10 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
+        * the default.
+        */
+       uint32_t options = XCB_PRESENT_OPTION_NONE;
+-      if (draw->swap_interval <= 0)
++      if (draw->swap_interval <= 0) {
+          options |= XCB_PRESENT_OPTION_ASYNC;
++         options |= XCB_PRESENT_OPTION_ASYNC_MAY_TEAR;
++      }
+ 
+       /* If we need to populate the new back, but need to reuse the back
+        * buffer slot due to lack of local blit capabilities, make sure
+-- 
+2.42.0
+

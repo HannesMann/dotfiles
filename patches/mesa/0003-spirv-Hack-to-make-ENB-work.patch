@@ -1,7 +1,7 @@
 From cc0109014b949ef520d8aacee32aa816d3b8b661 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sun, 16 Apr 2023 00:35:08 +0200
-Subject: [PATCH 3/3] spirv: Hack to make ENB work
+Subject: [PATCH 3/4] spirv: Hack to make ENB work
 
 ---
  src/compiler/spirv/spirv_to_nir.c | 27 +++++++++++++--------------
