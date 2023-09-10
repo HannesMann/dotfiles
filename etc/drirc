@@ -5,10 +5,11 @@
       <option name="vblank_mode" value="1" />
       <option name="vk_xwayland_wait_ready" value="false" />
       <option name="block_on_depleted_buffers" value="true" />
+      <option name="allow_rgb10_configs" value="false" />
       <option name="vk_khr_present_wait" value="true" />
     </application>
-    <application name="Brave" executable="brave">
-      <option name="vblank_mode" value="0" />
+    <application name="Kwin" executable="kwin_wayland">
+      <option name="mesa_glthread" value="false" />
     </application>
     <application name="Minecraft" executable="java">
       <option name="allow_glsl_extension_directive_midshader" value="true" />
