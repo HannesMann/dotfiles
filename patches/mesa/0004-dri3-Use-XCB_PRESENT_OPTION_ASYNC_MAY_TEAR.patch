@@ -1,14 +1,15 @@
-From 21f18f10713687280cd58622f150eb007d13961e Mon Sep 17 00:00:00 2001
+From 40e3ee4e0a7b610e52e11e78c88abd36be4fd61b Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 26 Aug 2023 00:53:41 +0200
 Subject: [PATCH 4/4] dri3: Use XCB_PRESENT_OPTION_ASYNC_MAY_TEAR
 
 ---
- src/loader/loader_dri3_helper.c | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+ src/loader/loader_dri3_helper.c | 11 ++++++++++-
+ src/loader/loader_dri3_helper.h |  1 +
+ 2 files changed, 11 insertions(+), 1 deletion(-)
 
 diff --git a/src/loader/loader_dri3_helper.c b/src/loader/loader_dri3_helper.c
-index 32135770e9d..807b1aaee6d 100644
+index 32135770e9d..ed05224afc0 100644
 --- a/src/loader/loader_dri3_helper.c
 +++ b/src/loader/loader_dri3_helper.c
 @@ -40,6 +40,10 @@
@@ -22,18 +23,40 @@ index 32135770e9d..807b1aaee6d 100644
  /**
   * A cached blit context.
   */
-@@ -1132,8 +1136,10 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
+@@ -437,6 +441,7 @@ loader_dri3_drawable_init(xcb_connection_t *conn,
+ 
+    draw->swap_interval = dri_get_initial_swap_interval(draw->dri_screen_render_gpu,
+                                                        draw->ext->config);
++   draw->mailbox_mode = getenv("mesa_gl_mailbox_mode") && !strcmp(getenv("mesa_gl_mailbox_mode"), "true");
+ 
+    dri3_update_max_num_back(draw);
+ 
+@@ -1132,8 +1137,12 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
         * the default.
         */
        uint32_t options = XCB_PRESENT_OPTION_NONE;
 -      if (draw->swap_interval <= 0)
 +      if (draw->swap_interval <= 0) {
           options |= XCB_PRESENT_OPTION_ASYNC;
-+         options |= XCB_PRESENT_OPTION_ASYNC_MAY_TEAR;
++         if (!draw->mailbox_mode) {
++            options |= XCB_PRESENT_OPTION_ASYNC_MAY_TEAR;
++         }
 +      }
  
        /* If we need to populate the new back, but need to reuse the back
         * buffer slot due to lack of local blit capabilities, make sure
+diff --git a/src/loader/loader_dri3_helper.h b/src/loader/loader_dri3_helper.h
+index 1fd340bd145..a4712e8cf2f 100644
+--- a/src/loader/loader_dri3_helper.h
++++ b/src/loader/loader_dri3_helper.h
+@@ -178,6 +178,7 @@ struct loader_dri3_drawable {
+    bool block_on_depleted_buffers;
+    bool queries_buffer_age;
+    int swap_interval;
++   bool mailbox_mode;
+ 
+    struct loader_dri3_extensions *ext;
+    const struct loader_dri3_vtable *vtable;
 -- 
 2.42.0
 

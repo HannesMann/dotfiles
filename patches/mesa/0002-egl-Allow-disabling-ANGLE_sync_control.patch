@@ -1,4 +1,4 @@
-From 1e5cabd965ad10f47e77d4a02220eaa1327bddc2 Mon Sep 17 00:00:00 2001
+From b6db327993ba5f58638fae01bb99e560728959f5 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 22 Jul 2023 00:06:37 +0200
 Subject: [PATCH 2/4] egl: Allow disabling ANGLE_sync_control
@@ -8,10 +8,10 @@ Subject: [PATCH 2/4] egl: Allow disabling ANGLE_sync_control
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/src/egl/drivers/dri2/platform_x11.c b/src/egl/drivers/dri2/platform_x11.c
-index 50e1333657e..25a021cc1d0 100644
+index 31f6d493f46..3113006e4dc 100644
 --- a/src/egl/drivers/dri2/platform_x11.c
 +++ b/src/egl/drivers/dri2/platform_x11.c
-@@ -1553,8 +1553,8 @@ dri2_initialize_x11_swrast(_EGLDisplay *disp)
+@@ -1556,8 +1556,8 @@ dri2_initialize_x11_swrast(_EGLDisplay *disp)
        if (dri2_dpy->fd_render_gpu == dri2_dpy->fd_display_gpu)
           disp->Extensions.KHR_image_pixmap = EGL_TRUE;
        disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
@@ -22,7 +22,7 @@ index 50e1333657e..25a021cc1d0 100644
        disp->Extensions.EXT_buffer_age = EGL_TRUE;
        disp->Extensions.EXT_swap_buffers_with_damage = EGL_TRUE;
  
-@@ -1639,8 +1639,8 @@ dri2_initialize_x11_dri3(_EGLDisplay *disp)
+@@ -1643,8 +1643,8 @@ dri2_initialize_x11_dri3(_EGLDisplay *disp)
     if (dri2_dpy->fd_render_gpu == dri2_dpy->fd_display_gpu)
        disp->Extensions.KHR_image_pixmap = EGL_TRUE;
     disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
@@ -33,7 +33,7 @@ index 50e1333657e..25a021cc1d0 100644
     disp->Extensions.EXT_buffer_age = EGL_TRUE;
     disp->Extensions.EXT_swap_buffers_with_damage = EGL_TRUE;
  
-@@ -1756,8 +1756,8 @@ dri2_initialize_x11_dri2(_EGLDisplay *disp)
+@@ -1760,8 +1760,8 @@ dri2_initialize_x11_dri2(_EGLDisplay *disp)
     disp->Extensions.NOK_swap_region = EGL_TRUE;
     disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
     disp->Extensions.NV_post_sub_buffer = EGL_TRUE;
