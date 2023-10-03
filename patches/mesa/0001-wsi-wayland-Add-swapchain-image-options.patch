@@ -1,7 +1,7 @@
-From f20a2ebdcfabf864f4dd1654ea5bfa08f79d3290 Mon Sep 17 00:00:00 2001
+From e9cbf85d3c73fbbe59db9db1f0bfe5430ccf04ec Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 26 Aug 2023 00:48:28 +0200
-Subject: [PATCH 1/4] wsi/wayland: Add swapchain image options
+Subject: [PATCH 1/5] wsi/wayland: Add swapchain image options
 
 ---
  src/amd/vulkan/radv_instance.c      |  3 ++
@@ -30,7 +30,7 @@ index b0b593dd43e..3d7937474ff 100644
        DRI_CONF_VK_XWAYLAND_WAIT_READY(true)
        DRI_CONF_RADV_REPORT_LLVM9_VERSION_STRING(false)
 diff --git a/src/intel/vulkan/anv_device.c b/src/intel/vulkan/anv_device.c
-index 70febb2e7c5..e93b9d6acf4 100644
+index a06dd75f160..5d041cb924d 100644
 --- a/src/intel/vulkan/anv_device.c
 +++ b/src/intel/vulkan/anv_device.c
 @@ -75,6 +75,8 @@ static const driOptionDescription anv_dri_options[] = {
@@ -43,7 +43,7 @@ index 70febb2e7c5..e93b9d6acf4 100644
        DRI_CONF_VK_XWAYLAND_WAIT_READY(true)
        DRI_CONF_ANV_ASSUME_FULL_SUBGROUPS(false)
 diff --git a/src/intel/vulkan_hasvk/anv_device.c b/src/intel/vulkan_hasvk/anv_device.c
-index 8aed6d55818..747bb737cb6 100644
+index 6798f607b29..790e77ab2e4 100644
 --- a/src/intel/vulkan_hasvk/anv_device.c
 +++ b/src/intel/vulkan_hasvk/anv_device.c
 @@ -66,6 +66,8 @@ static const driOptionDescription anv_dri_options[] = {
@@ -56,10 +56,10 @@ index 8aed6d55818..747bb737cb6 100644
        DRI_CONF_ANV_ASSUME_FULL_SUBGROUPS(false)
        DRI_CONF_ANV_SAMPLE_MASK_OUT_OPENGL_BEHAVIOUR(false)
 diff --git a/src/util/driconf.h b/src/util/driconf.h
-index b8dbdae4486..9b8f04ba9e3 100644
+index 8d7f2eb57a5..ca74ce18a80 100644
 --- a/src/util/driconf.h
 +++ b/src/util/driconf.h
-@@ -400,7 +400,7 @@
+@@ -404,7 +404,7 @@
  
  #define DRI_CONF_VK_X11_OVERRIDE_MIN_IMAGE_COUNT(def) \
     DRI_CONF_OPT_I(vk_x11_override_min_image_count, def, 0, 999, \
@@ -68,7 +68,7 @@ index b8dbdae4486..9b8f04ba9e3 100644
  
  #define DRI_CONF_VK_X11_STRICT_IMAGE_COUNT(def) \
     DRI_CONF_OPT_B(vk_x11_strict_image_count, def, \
-@@ -410,6 +410,18 @@
+@@ -414,6 +414,18 @@
     DRI_CONF_OPT_B(vk_x11_ensure_min_image_count, def, \
                    "Force the X11 WSI to create at least the number of image specified by the driver in VkSurfaceCapabilitiesKHR::minImageCount")
  

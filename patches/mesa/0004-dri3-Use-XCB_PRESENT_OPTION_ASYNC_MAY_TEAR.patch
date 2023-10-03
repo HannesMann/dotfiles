@@ -1,7 +1,7 @@
-From 40e3ee4e0a7b610e52e11e78c88abd36be4fd61b Mon Sep 17 00:00:00 2001
+From 166505ec9a41e67b0fcf80faecc3c5d11049a86e Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 26 Aug 2023 00:53:41 +0200
-Subject: [PATCH 4/4] dri3: Use XCB_PRESENT_OPTION_ASYNC_MAY_TEAR
+Subject: [PATCH 4/5] dri3: Use XCB_PRESENT_OPTION_ASYNC_MAY_TEAR
 
 ---
  src/loader/loader_dri3_helper.c | 11 ++++++++++-
