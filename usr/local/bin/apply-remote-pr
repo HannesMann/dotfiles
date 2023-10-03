@@ -40,18 +40,19 @@ oldhead=$(git rev-parse HEAD)
 git apply --check "$1.patch" || (mv "$1.patch" "$tmp_file" && exit 1)
 git am "$1.patch" || (mv "$1.patch" "$tmp_file" && exit 1)
 
-# Applied successfully!
-git commit -q --author="$(git config user.name) apply-remote-pr <$(git config user.email)>" --allow-empty -m "checkpoint !$1
-$REMOTE_BASE
+if [ ! -z "$REMOTE_INSERT_CHECKPOINT" ]; then
+	git commit -q --author="$(git config user.name) apply-remote-pr <$(git config user.email)>" --allow-empty -m "Checkpoint !$1
+	$REMOTE_BASE
 
-$(git log $oldhead..HEAD --pretty=format:%s)
+	$(git log $oldhead..HEAD --pretty=format:%s)
 
-To revert:
-$(git log $oldhead..HEAD --pretty='format:git revert %H')
+	To revert:
+	$(git log $oldhead..HEAD --pretty='format:git revert %H')
 
-Or:
-git reset --hard $oldhead
-"
+	Or:
+	git reset --hard $oldhead
+	"
+fi
 
 rm "$1.patch"
 
