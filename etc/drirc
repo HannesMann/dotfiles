@@ -8,9 +8,6 @@
       <option name="allow_rgb10_configs" value="false" />
       <option name="vk_khr_present_wait" value="true" />
     </application>
-    <application name="Kwin" executable="kwin_wayland">
-      <option name="mesa_glthread" value="false" />
-    </application>
     <application name="Minecraft" executable="java">
       <option name="allow_glsl_extension_directive_midshader" value="true" />
       <option name="allow_glsl_builtin_variable_redeclaration" value="true" />
