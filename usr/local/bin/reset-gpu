@@ -1,4 +1,4 @@
 #!/bin/bash
-sudo cat /sys/kernel/debug/dri/*/amdgpu_gpu_recover
+sudo zsh -c "cat /sys/kernel/debug/dri/*/amdgpu_gpu_recover"
 sleep 3
 kill -9 $(pidof kwin_wayland)
