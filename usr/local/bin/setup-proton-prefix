@@ -34,4 +34,6 @@ while read line; do
 	fi
 done < /tmp/user-wine-install.conf
 
+protontricks-launch --no-runtime --no-bwrap --appid $1 regedit "Z:/etc/default-wine-overrides.reg"
+
 protontricks --no-runtime --no-bwrap $1 --force -q win10

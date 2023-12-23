@@ -1,4 +1,4 @@
-From b716a490e1bc7a036b89be68e83bd24715b40662 Mon Sep 17 00:00:00 2001
+From 8f63d50731f2e62482cd77b65d30e5c7068d225b Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Sat, 1 Jul 2023 03:21:45 +0200
 Subject: [PATCH 1/1] xwayland: Always generate modes from values
@@ -71,5 +71,5 @@ index 4248d3869..e8efcdb47 100644
      snprintf(name, sizeof name, "%dx%d",
               modeinfo.width, modeinfo.height);
 -- 
-2.41.0
+2.42.1
 

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if [ "$PAM_TYPE" != "close_session" ]; then
+	dbus-send --system / net.nuetzlich.SystemNotifications.Notify "string:New SSH connection" "string:An SSH connection has been made for $PAM_USER from $PAM_RHOST"
+fi

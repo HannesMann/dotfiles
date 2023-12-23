@@ -36,9 +36,7 @@ wineserver -p
 setup_dxvk install --symlink
 setup_vkd3d_proton install --symlink
 
-wine reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v "d3d6" /d native,builtin /f
-wine reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v "d3d7" /d native,builtin /f
-wine reg add "HKEY_CURRENT_USER\Software\Wine\DllOverrides" /v "d3d8" /d native,builtin /f
+wine regedit /etc/default-wine-overrides.reg
 
 winetricks $1 --force -q win10
 

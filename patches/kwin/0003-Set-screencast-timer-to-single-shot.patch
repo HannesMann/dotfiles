@@ -1,0 +1,24 @@
+From 2ef332f5ea5862a97aae7b97761eefcdaf372de7 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Wed, 13 Dec 2023 05:14:40 +0100
+Subject: [PATCH 3/4] Set screencast timer to single shot
+
+---
+ src/plugins/screencast/screencaststream.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/plugins/screencast/screencaststream.cpp b/src/plugins/screencast/screencaststream.cpp
+index 1f024e0879..838176d75f 100644
+--- a/src/plugins/screencast/screencaststream.cpp
++++ b/src/plugins/screencast/screencaststream.cpp
+@@ -315,6 +315,8 @@ ScreenCastStream::ScreenCastStream(ScreenCastSource *source, QObject *parent)
+     pwStreamEvents.param_changed = &ScreenCastStream::onStreamParamChanged;
+ 
++    m_pendingFrame.setSingleShot(true);
++
+     connect(&m_pendingFrame, &QTimer::timeout, this, [this] {
+         recordFrame(m_pendingDamages);
+     });
+-- 
+2.43.0
+

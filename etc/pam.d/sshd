@@ -1,0 +1,7 @@
+#%PAM-1.0
+#auth     required  pam_securetty.so     #disable remote root
+auth      include   system-remote-login
+account   include   system-remote-login
+password  include   system-remote-login
+session   include   system-remote-login
+session   optional  pam_exec.so         seteuid /usr/local/bin/ssh-pam-login-notify
