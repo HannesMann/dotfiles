@@ -1,16 +1,16 @@
-From 9cc1f3dfae91965f96ead958f0b503c6775ba0cf Mon Sep 17 00:00:00 2001
+From 6867e0241aa2056499caf035b8a9c57781214972 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
-Date: Sun, 10 Sep 2023 04:50:20 +0200
-Subject: [PATCH 3/3] texture-amf: Override defaults, assume B-frames and
+Date: Wed, 6 Mar 2024 02:19:14 +0100
+Subject: [PATCH 3/4] texture-amf: Override defaults, assume B-frames and
  throughput
 
 ---
  plugins/obs-ffmpeg/CMakeLists.txt  |   3 +
- plugins/obs-ffmpeg/texture-amf.cpp | 153 ++++-------------------------
- 2 files changed, 22 insertions(+), 134 deletions(-)
+ plugins/obs-ffmpeg/texture-amf.cpp | 147 +++++------------------------
+ 2 files changed, 26 insertions(+), 124 deletions(-)
 
 diff --git a/plugins/obs-ffmpeg/CMakeLists.txt b/plugins/obs-ffmpeg/CMakeLists.txt
-index 61725b4e4..265bd7423 100644
+index fd140631a..e951fd981 100644
 --- a/plugins/obs-ffmpeg/CMakeLists.txt
 +++ b/plugins/obs-ffmpeg/CMakeLists.txt
 @@ -1,5 +1,8 @@
@@ -23,10 +23,10 @@ index 61725b4e4..265bd7423 100644
  
  option(ENABLE_FFMPEG_LOGGING "Enables obs-ffmpeg logging" OFF)
 diff --git a/plugins/obs-ffmpeg/texture-amf.cpp b/plugins/obs-ffmpeg/texture-amf.cpp
-index fafb3e3d7..406d0d2ca 100644
+index b1e07cfcb..6998f8e0c 100644
 --- a/plugins/obs-ffmpeg/texture-amf.cpp
 +++ b/plugins/obs-ffmpeg/texture-amf.cpp
-@@ -194,9 +194,6 @@ struct amf_base {
+@@ -195,9 +195,6 @@ struct amf_base {
  	AMF_COLOR_PRIMARIES_ENUM amf_primaries;
  	AMF_SURFACE_FORMAT amf_format;
  
@@ -36,15 +36,15 @@ index fafb3e3d7..406d0d2ca 100644
  	int64_t dts_offset = 0;
  	uint32_t cx;
  	uint32_t cy;
-@@ -204,7 +201,6 @@ struct amf_base {
+@@ -206,7 +203,6 @@ struct amf_base {
  	int fps_num;
  	int fps_den;
  	bool full_range;
 -	bool bframes_supported = false;
  	bool first_update = true;
+ 	bool roi_supported = false;
  
- 	inline amf_base(bool fallback) : fallback(fallback) {}
-@@ -1120,18 +1116,6 @@ static inline GLuint get_read_fbo(amf_texencode *enc, gs_texture *tex)
+@@ -1123,18 +1119,6 @@ static inline GLuint get_read_fbo(amf_texencode *enc, gs_texture *tex)
  
  static constexpr amf_int64 macroblock_size = 16;
  
@@ -63,7 +63,7 @@ index fafb3e3d7..406d0d2ca 100644
  static inline int get_avc_preset(amf_base *enc, const char *preset);
  #if ENABLE_HEVC
  static inline int get_hevc_preset(amf_base *enc, const char *preset);
-@@ -1154,64 +1138,6 @@ static inline int get_preset(amf_base *enc, const char *preset)
+@@ -1157,64 +1141,6 @@ static inline int get_preset(amf_base *enc, const char *preset)
  	return 0;
  }
  
@@ -128,7 +128,7 @@ index fafb3e3d7..406d0d2ca 100644
  static inline int64_t convert_to_amf_ts(amf_base *enc, int64_t ts)
  {
  	constexpr int64_t amf_timebase = AMF_SECOND;
-@@ -1931,7 +1857,6 @@ try {
+@@ -2035,7 +1961,6 @@ try {
  	if (res != AMF_OK)
  		throw amf_error("CreateComponent failed", res);
  
@@ -136,7 +136,7 @@ index fafb3e3d7..406d0d2ca 100644
  	return true;
  
  } catch (const amf_error &err) {
-@@ -2168,7 +2093,7 @@ static void amf_avc_update_data(amf_base *enc, int rc, int64_t bitrate,
+@@ -2273,7 +2198,7 @@ static void amf_avc_update_data(amf_base *enc, int rc, int64_t bitrate,
  		set_avc_property(enc, VBV_BUFFER_SIZE, bitrate);
  
  		if (rc == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR) {
@@ -145,30 +145,42 @@ index fafb3e3d7..406d0d2ca 100644
  		}
  	} else {
  		set_avc_property(enc, QP_I, qp);
-@@ -2223,16 +2148,12 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
+@@ -2328,23 +2253,18 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
  	const char *rc_str = obs_data_get_string(settings, "rate_control");
  	int64_t bf = obs_data_get_int(settings, "bf");
  
 -	if (enc->bframes_supported) {
--		set_avc_property(enc, MAX_CONSECUTIVE_BPICTURES, 3);
+-		set_avc_property(enc, MAX_CONSECUTIVE_BPICTURES, bf);
 -		set_avc_property(enc, B_PIC_PATTERN, bf);
 -
+-		/* AdaptiveMiniGOP is suggested for some types of content such
+-		 * as those with high motion. This only takes effect if
+-		 * Pre-Analysis is enabled.
+-		 */
+-		if (bf > 0) {
+-			set_avc_property(enc, ADAPTIVE_MINIGOP, true);
+-		}
++	set_avc_property(enc, MAX_CONSECUTIVE_BPICTURES, bf);
++	set_avc_property(enc, B_PIC_PATTERN, bf);
++	set_avc_property(enc, B_REFERENCE_ENABLE, true);
++	set_avc_property(enc, RATE_CONTROL_SKIP_FRAME_ENABLE, false);
++	set_avc_property(enc, FILLER_DATA_ENABLE, false);
+ 
 -	} else if (bf != 0) {
 -		warn("B-Frames set to %" PRId64 " but b-frames are not "
 -		     "supported by this device",
 -		     bf);
 -		bf = 0;
--	}
-+	set_avc_property(enc, MAX_CONSECUTIVE_BPICTURES, bf);
-+	set_avc_property(enc, B_PIC_PATTERN, bf);
-+	set_avc_property(enc, B_REFERENCE_ENABLE, true);
-+	set_avc_property(enc, ADAPTIVE_MINIGOP, true);
-+	set_avc_property(enc, RATE_CONTROL_SKIP_FRAME_ENABLE, false);
-+	set_avc_property(enc, FILLER_DATA_ENABLE, false);
++	/* AdaptiveMiniGOP is suggested for some types of content such
++		* as those with high motion. This only takes effect if
++		* Pre-Analysis is enabled.
++		*/
++	if (bf > 0) {
++		set_avc_property(enc, ADAPTIVE_MINIGOP, true);
+ 	}
  
  	int rc = get_avc_rate_control(rc_str);
- 
-@@ -2257,8 +2178,6 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
+@@ -2370,8 +2290,6 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
  
  	set_avc_property(enc, DE_BLOCKING_FILTER, true);
  
@@ -177,25 +189,20 @@ index fafb3e3d7..406d0d2ca 100644
  	const char *ffmpeg_opts = obs_data_get_string(settings, "ffmpeg_opts");
  	if (ffmpeg_opts && *ffmpeg_opts) {
  		struct obs_options opts = obs_parse_options(ffmpeg_opts);
-@@ -2298,17 +2217,6 @@ static void amf_avc_create_internal(amf_base *enc, obs_data_t *settings)
- 	if (!amf_create_encoder(enc))
- 		throw "Failed to create encoder";
- 
--	AMFCapsPtr caps;
--	res = enc->amf_encoder->GetCaps(&caps);
--	if (res == AMF_OK) {
+@@ -2414,12 +2332,6 @@ static void amf_avc_create_internal(amf_base *enc, obs_data_t *settings)
+ 	AMFCapsPtr caps;
+ 	res = enc->amf_encoder->GetCaps(&caps);
+ 	if (res == AMF_OK) {
 -		caps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES,
 -				  &enc->bframes_supported);
 -		caps->GetProperty(AMF_VIDEO_ENCODER_CAP_MAX_THROUGHPUT,
 -				  &enc->max_throughput);
 -		caps->GetProperty(AMF_VIDEO_ENCODER_CAP_REQUESTED_THROUGHPUT,
 -				  &enc->requested_throughput);
--	}
--
- 	const char *preset = obs_data_get_string(settings, "preset");
- 
- 	set_avc_property(enc, FRAMESIZE, AMFConstructSize(enc->cx, enc->cy));
-@@ -2336,16 +2244,14 @@ static void amf_avc_create_internal(amf_base *enc, obs_data_t *settings)
+ 		caps->GetProperty(AMF_VIDEO_ENCODER_CAP_ROI,
+ 				  &enc->roi_supported);
+ 	}
+@@ -2450,16 +2362,14 @@ static void amf_avc_create_internal(amf_base *enc, obs_data_t *settings)
  	if (res == AMF_OK && p.type == AMF_VARIANT_INTERFACE)
  		enc->header = AMFBufferPtr(p.pInterface);
  
@@ -219,7 +226,7 @@ index fafb3e3d7..406d0d2ca 100644
  }
  
  static void *amf_avc_create_texencode(obs_data_t *settings,
-@@ -2506,7 +2412,7 @@ static void amf_hevc_update_data(amf_base *enc, int rc, int64_t bitrate,
+@@ -2623,7 +2533,7 @@ static void amf_hevc_update_data(amf_base *enc, int rc, int64_t bitrate,
  		set_hevc_property(enc, VBV_BUFFER_SIZE, bitrate);
  
  		if (rc == AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR) {
@@ -228,7 +235,7 @@ index fafb3e3d7..406d0d2ca 100644
  		}
  	} else {
  		set_hevc_property(enc, QP_I, qp);
-@@ -2569,14 +2475,15 @@ static bool amf_hevc_init(void *data, obs_data_t *settings)
+@@ -2686,14 +2596,15 @@ static bool amf_hevc_init(void *data, obs_data_t *settings)
  	set_hevc_property(enc, ENFORCE_HRD, true);
  	set_hevc_property(enc, HIGH_MOTION_QUALITY_BOOST_ENABLE, false);
  
@@ -246,24 +253,19 @@ index fafb3e3d7..406d0d2ca 100644
  	const char *ffmpeg_opts = obs_data_get_string(settings, "ffmpeg_opts");
  	if (ffmpeg_opts && *ffmpeg_opts) {
  		struct obs_options opts = obs_parse_options(ffmpeg_opts);
-@@ -2639,16 +2546,6 @@ static void amf_hevc_create_internal(amf_base *enc, obs_data_t *settings)
- 	if (!amf_create_encoder(enc))
- 		throw "Failed to create encoder";
- 
--	AMFCapsPtr caps;
--	res = enc->amf_encoder->GetCaps(&caps);
--	if (res == AMF_OK) {
+@@ -2759,11 +2670,6 @@ static void amf_hevc_create_internal(amf_base *enc, obs_data_t *settings)
+ 	AMFCapsPtr caps;
+ 	res = enc->amf_encoder->GetCaps(&caps);
+ 	if (res == AMF_OK) {
 -		caps->GetProperty(AMF_VIDEO_ENCODER_HEVC_CAP_MAX_THROUGHPUT,
 -				  &enc->max_throughput);
 -		caps->GetProperty(
 -			AMF_VIDEO_ENCODER_HEVC_CAP_REQUESTED_THROUGHPUT,
 -			&enc->requested_throughput);
--	}
--
- 	const bool is10bit = enc->amf_format == AMF_SURFACE_P010;
- 	const bool pq = is_pq(enc);
- 	const bool hlg = is_hlg(enc);
-@@ -2957,8 +2854,6 @@ static bool amf_av1_init(void *data, obs_data_t *settings)
+ 		caps->GetProperty(AMF_VIDEO_ENCODER_HEVC_CAP_ROI,
+ 				  &enc->roi_supported);
+ 	}
+@@ -3078,8 +2984,6 @@ static bool amf_av1_init(void *data, obs_data_t *settings)
  		obs_free_options(opts);
  	}
  
@@ -272,32 +274,18 @@ index fafb3e3d7..406d0d2ca 100644
  	if (!ffmpeg_opts || !*ffmpeg_opts)
  		ffmpeg_opts = "(none)";
  
-@@ -2985,16 +2880,6 @@ static void amf_av1_create_internal(amf_base *enc, obs_data_t *settings)
- 	if (!amf_create_encoder(enc))
- 		throw "Failed to create encoder";
- 
--	AMFCapsPtr caps;
--	AMF_RESULT res = enc->amf_encoder->GetCaps(&caps);
--	if (res == AMF_OK) {
+@@ -3109,11 +3013,6 @@ static void amf_av1_create_internal(amf_base *enc, obs_data_t *settings)
+ 	AMFCapsPtr caps;
+ 	AMF_RESULT res = enc->amf_encoder->GetCaps(&caps);
+ 	if (res == AMF_OK) {
 -		caps->GetProperty(AMF_VIDEO_ENCODER_AV1_CAP_MAX_THROUGHPUT,
 -				  &enc->max_throughput);
 -		caps->GetProperty(
 -			AMF_VIDEO_ENCODER_AV1_CAP_REQUESTED_THROUGHPUT,
 -			&enc->requested_throughput);
--	}
--
- 	const bool is10bit = enc->amf_format == AMF_SURFACE_P010;
- 	const char *preset = obs_data_get_string(settings, "preset");
- 
-@@ -3017,7 +2902,7 @@ static void amf_av1_create_internal(amf_base *enc, obs_data_t *settings)
- 
- 	amf_av1_init(enc, settings);
- 
--	res = enc->amf_encoder->Init(enc->amf_format, enc->cx, enc->cy);
-+	AMF_RESULT res = enc->amf_encoder->Init(enc->amf_format, enc->cx, enc->cy);
- 	if (res != AMF_OK)
- 		throw amf_error("AMFComponent::Init failed", res);
- 
+ 		/* For some reason there's no specific CAP for AV1, but should always be supported */
+ 		enc->roi_supported = true;
+ 	}
 -- 
-2.42.0
+2.44.0
 

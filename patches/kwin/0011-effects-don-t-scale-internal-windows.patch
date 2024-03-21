@@ -1,0 +1,105 @@
+From 1df06e70b0ba842d86de84fd982889a062b39313 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Wed, 28 Feb 2024 04:09:37 +0100
+Subject: [PATCH 11/12] effects: don't scale internal windows
+
+---
+ src/effect/effectwindow.cpp                     |  7 +++++++
+ src/effect/effectwindow.h                       | 12 ++++++++++++
+ src/plugins/glide/glide.cpp                     |  3 ++-
+ src/plugins/scale/package/contents/code/main.js |  3 ++-
+ 4 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/src/effect/effectwindow.cpp b/src/effect/effectwindow.cpp
+index e7450fc55e..f05d1b0b6d 100644
+--- a/src/effect/effectwindow.cpp
++++ b/src/effect/effectwindow.cpp
+@@ -35,6 +35,7 @@ public:
+     bool managed = false;
+     bool m_waylandWindow;
+     bool m_x11Window;
++    bool m_internalWindow;
+ };
+ 
+ EffectWindow::Private::Private(EffectWindow *q, WindowItem *windowItem)
+@@ -62,6 +63,7 @@ EffectWindow::EffectWindow(WindowItem *windowItem)
+ #else
+     d->m_x11Window = false;
+ #endif
++    d->m_internalWindow = qobject_cast<KWin::InternalWindow *>(d->m_window) != nullptr;
+ 
+     connect(d->m_window, &Window::hiddenChanged, this, [this]() {
+         Q_EMIT windowHiddenChanged(this);
+@@ -498,6 +500,11 @@ bool EffectWindow::isX11Client() const
+     return d->m_x11Window;
+ }
+ 
++bool EffectWindow::isInternal() const
++{
++    return d->m_internalWindow;
++}
++
+ //****************************************
+ // EffectWindowGroup
+ //****************************************
+diff --git a/src/effect/effectwindow.h b/src/effect/effectwindow.h
+index df36516fc3..dfa7909915 100644
+--- a/src/effect/effectwindow.h
++++ b/src/effect/effectwindow.h
+@@ -300,6 +300,13 @@ class KWIN_EXPORT EffectWindow : public QObject
+      */
+     Q_PROPERTY(QWindow *internalWindow READ internalWindow CONSTANT)
+ 
++    /**
++     * If this is an internal window. Specific to Wayland platform.
++     * NOTE: This property persists after EffectWindow::internalWindow is destroyed
++     * @since 6.0
++     */
++    Q_PROPERTY(bool internal READ isInternal CONSTANT)
++
+     /**
+      * Whether this EffectWindow represents the outline.
+      *
+@@ -626,6 +633,11 @@ public:
+      */
+     QWindow *internalWindow() const;
+ 
++    /**
++     * @since 6.0
++     */
++    bool isInternal() const;
++
+     /**
+      * @since 5.16
+      */
+diff --git a/src/plugins/glide/glide.cpp b/src/plugins/glide/glide.cpp
+index 0a8be64f11..f7a880ee0c 100644
+--- a/src/plugins/glide/glide.cpp
++++ b/src/plugins/glide/glide.cpp
+@@ -270,7 +270,8 @@ bool GlideEffect::isGlideWindow(EffectWindow *w) const
+     // to use a heuristic: if a window has decoration, then it's most
+     // likely a dialog or a settings window so we have to animate it.
+     if (w->windowClass() == QLatin1String("plasmashell plasmashell")
+-        || w->windowClass() == QLatin1String("plasmashell org.kde.plasmashell")) {
++        || w->windowClass() == QLatin1String("plasmashell org.kde.plasmashell")
++        || w->isInternal()) {
+         return w->hasDecoration();
+     }
+ 
+diff --git a/src/plugins/scale/package/contents/code/main.js b/src/plugins/scale/package/contents/code/main.js
+index 32a3b2e652..b9cfd99bd5 100644
+--- a/src/plugins/scale/package/contents/code/main.js
++++ b/src/plugins/scale/package/contents/code/main.js
+@@ -49,7 +49,8 @@ class ScaleEffect {
+         // to use a heuristic: if a window has decoration, then it's most
+         // likely a dialog or a settings window so we have to animate it.
+         if (window.windowClass == "plasmashell plasmashell"
+-                || window.windowClass == "plasmashell org.kde.plasmashell") {
++                || window.windowClass == "plasmashell org.kde.plasmashell"
++                || window.internal) {
+             return window.hasDecoration;
+         }
+ 
+-- 
+2.44.0
+

@@ -1,0 +1,25 @@
+From 4c8dfc92ef7c563d9c4f0beb260bf3f21e6b67f7 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Wed, 6 Mar 2024 02:22:54 +0100
+Subject: [PATCH 4/4] obs-amf-test: Allow without AMDGPU-PRO
+
+---
+ plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp b/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
+index db437d851..3e0c9b3e7 100644
+--- a/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
++++ b/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
+@@ -99,7 +99,7 @@ try {
+ 	vkGetPhysicalDeviceProperties2(devices[0], &device_props);
+ 
+ 	if (strcmp(driver_props.driverName, "AMD proprietary driver"))
+-		throw "Not running AMD proprietary driver";
++		printf("warning: not running AMD proprietary driver\n");
+ 
+ 	vkDestroyInstance(instance, nullptr);
+ 
+-- 
+2.44.0
+

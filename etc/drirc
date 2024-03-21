@@ -6,8 +6,8 @@
       <option name="allow_rgb10_configs" value="false" />
       <option name="vk_x11_override_min_image_count" value="3" />
       <option name="vk_wayland_override_min_image_count" value="3" />
-      <option name="vk_xwayland_wait_ready" value="false" />
       <option name="vk_khr_present_wait" value="true" />
+      <option name="vk_xwayland_wait_ready" value="false" />
     </application>
     <application name="Minecraft" executable="java">
       <option name="allow_glsl_extension_directive_midshader" value="true" />
@@ -22,6 +22,9 @@
     </application>
     <application name="mpv" executable="mpv">
       <option name="gl_mailbox_mode" value="true" />
+    </application>
+    <application name="KWin" executable="kwin_wayland">
+      <option name="mesa_glthread" value="false" />
     </application>
   </device>
 </driconf>

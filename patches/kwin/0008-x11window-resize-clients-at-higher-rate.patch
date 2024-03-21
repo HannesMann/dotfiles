@@ -1,0 +1,31 @@
+From 3618203c68a84049df2d1cb3a7fc940ae37eb54c Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Mon, 26 Feb 2024 20:10:05 +0100
+Subject: [PATCH 08/12] x11window: resize clients at higher rate
+
+---
+ src/x11window.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/x11window.cpp b/src/x11window.cpp
+index c2001685cb..34ede70112 100644
+--- a/src/x11window.cpp
++++ b/src/x11window.cpp
+@@ -4773,12 +4773,12 @@ void X11Window::doInteractiveResizeSync(const QRectF &rect)
+         m_syncRequest.timeout->start(250);
+         sendSyncRequest();
+     } else {
+-        // For clients not supporting the XSYNC protocol, we limit the resizes to 30Hz
++        // For clients not supporting the XSYNC protocol, we limit the resizes to 180Hz
+         // to take pointless load from X11 and the client, the mouse is still moved at
+         // full speed and no human can control faster resizes anyway.
+         m_syncRequest.isPending = true;
+         m_syncRequest.interactiveResize = true;
+-        m_syncRequest.timeout->start(33);
++        m_syncRequest.timeout->start(1000.0 / 180.0);
+     }
+ 
+     const QRectF moveResizeClientGeometry = frameRectToClientRect(moveResizeGeometry());
+-- 
+2.44.0
+

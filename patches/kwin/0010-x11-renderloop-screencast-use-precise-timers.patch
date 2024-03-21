@@ -1,0 +1,73 @@
+From 1f6e259b8caca024cb2bea876a543b14ae8fd6ad Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Wed, 28 Feb 2024 04:05:50 +0100
+Subject: [PATCH 10/12] x11, renderloop, screencast: use precise timers
+
+---
+ src/core/renderloop.cpp                     | 10 +++++++---
+ src/plugins/screencast/screencaststream.cpp |  2 ++
+ src/tabbox/tabbox.cpp                       |  1 +
+ src/x11window.cpp                           |  1 +
+ 4 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/renderloop.cpp b/src/core/renderloop.cpp
+index 3e49f3edde..49a83a0c3a 100644
+--- a/src/core/renderloop.cpp
++++ b/src/core/renderloop.cpp
+@@ -31,9 +31,13 @@ RenderLoopPrivate::RenderLoopPrivate(RenderLoop *q, Output *output)
+     , output(output)
+ {
+     compositeTimer.setSingleShot(true);
+-    QObject::connect(&compositeTimer, &QTimer::timeout, q, [this]() {
+-        dispatch();
+-    });
++    compositeTimer.setTimerType(Qt::PreciseTimer);
++
++    QObject::connect(
++        &compositeTimer, &QTimer::timeout, q, [this]() {
++            dispatch();
++        },
++        Qt::DirectConnection);
+ }
+ 
+ void RenderLoopPrivate::scheduleRepaint()
+diff --git a/src/plugins/screencast/screencaststream.cpp b/src/plugins/screencast/screencaststream.cpp
+index 294ae19260..8f0cdb7536 100644
+--- a/src/plugins/screencast/screencaststream.cpp
++++ b/src/plugins/screencast/screencaststream.cpp
+@@ -339,6 +339,8 @@ ScreenCastStream::ScreenCastStream(ScreenCastSource *source, std::shared_ptr<Pip
+     };
+ 
+     m_pendingFrame.setSingleShot(true);
++    m_pendingFrame.setTimerType(Qt::PreciseTimer);
++
+     connect(&m_pendingFrame, &QTimer::timeout, this, [this] {
+         recordFrame(m_pendingDamages);
+     });
+diff --git a/src/tabbox/tabbox.cpp b/src/tabbox/tabbox.cpp
+index 8e5cc30e53..6b6abb2a9e 100644
+--- a/src/tabbox/tabbox.cpp
++++ b/src/tabbox/tabbox.cpp
+@@ -603,6 +603,7 @@ void TabBox::delayedShow()
+     }
+ 
+     m_delayedShowTimer.setSingleShot(true);
++    m_delayedShowTimer.setTimerType(Qt::PreciseTimer);
+     m_delayedShowTimer.start(m_delayShowTime);
+ }
+ 
+diff --git a/src/x11window.cpp b/src/x11window.cpp
+index 34ede70112..d56f3024a7 100644
+--- a/src/x11window.cpp
++++ b/src/x11window.cpp
+@@ -4767,6 +4767,7 @@ void X11Window::doInteractiveResizeSync(const QRectF &rect)
+         m_syncRequest.timeout = new QTimer(this);
+         connect(m_syncRequest.timeout, &QTimer::timeout, this, &X11Window::handleSyncTimeout);
+         m_syncRequest.timeout->setSingleShot(true);
++        m_syncRequest.timeout->setTimerType(Qt::PreciseTimer);
+     }
+ 
+     if (m_syncRequest.counter != XCB_NONE) {
+-- 
+2.44.0
+

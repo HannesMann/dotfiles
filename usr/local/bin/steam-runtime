@@ -1,0 +1,2 @@
+#!/bin/bash
+/usr/bin/steam-runtime -forcedesktopscaling=1.25 "$@"

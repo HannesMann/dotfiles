@@ -1,10 +1,17 @@
 #!/bin/bash
 export vblank_mode=0
-export MESA_VK_WSI_PRESENT_MODE=mailbox
+if [ -z "$WAYLAND_DISPLAY" ]; then
+	echo "Running on X11"
+	export MESA_VK_WSI_PRESENT_MODE=immediate
+else
+	echo "Running on Wayland"
+	#export MESA_VK_WSI_PRESENT_MODE=mailbox
+	export MESA_VK_WSI_PRESENT_MODE=immediate
+fi
+#export RADV_DEBUG=nodisplaydcc
 #export RADV_PERFTEST=nodcc
 #export vk_xwayland_wait_ready=true
 #export RADV_DEBUG=zerovram
-#export MESA_SHADER_CACHE_DISABLE=true
 
 if [[ "$(basename $0)" == "use-chromium-flags" ]]; then
 	echo "Script should be invoked through a symlink"

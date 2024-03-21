@@ -1,0 +1,27 @@
+From 584a2059cbd4e5e75e3d43ff06c3952fcad1da94 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Thu, 21 Mar 2024 18:27:30 +0100
+Subject: [PATCH 1/1] winmm: Decrease latency by lowering AC_BUFLEN
+
+---
+ dlls/winmm/waveform.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winmm/waveform.c b/dlls/winmm/waveform.c
+index f7fe81710e0..189826271c5 100644
+--- a/dlls/winmm/waveform.c
++++ b/dlls/winmm/waveform.c
+@@ -61,8 +61,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(winmm);
+  *   - We must be able to identify bad devices without crashing.
+  */
+ 
+-/* buffer size = 10 * 100000 (100 ns) = 0.1 seconds */
+-#define AC_BUFLEN (10 * 100000)
++/* buffer size = 2 * 100000 (100 ns) = 20 ms */
++#define AC_BUFLEN (2 * 100000)
+ #define MAX_DEVICES 256
+ #define MAPPER_INDEX 0x3F
+ 
+-- 
+2.44.0
+

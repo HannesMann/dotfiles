@@ -1,0 +1,14 @@
+#!/bin/bash
+# Discover open MangoHud sockets
+pattern="mangohud-control"
+sockets=$(netstat -lnx | tr -s ' ' '\n' | rg $pattern - | tr '\n' ' ')
+if [ -z "$sockets" ]; then
+	exit 1
+fi
+result=""
+
+for s in $sockets; do
+	result+="${s:1} "
+done
+
+echo $result
