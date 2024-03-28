@@ -1,22 +1,21 @@
 #!/bin/bash
 export vblank_mode=0
+
 if [ -z "$WAYLAND_DISPLAY" ]; then
 	echo "Running on X11"
 	export MESA_VK_WSI_PRESENT_MODE=immediate
 else
 	echo "Running on Wayland"
-	#export MESA_VK_WSI_PRESENT_MODE=mailbox
-	export MESA_VK_WSI_PRESENT_MODE=immediate
+	export MESA_VK_WSI_PRESENT_MODE=mailbox
 fi
-#export RADV_DEBUG=nodisplaydcc
-#export RADV_PERFTEST=nodcc
-#export vk_xwayland_wait_ready=true
-#export RADV_DEBUG=zerovram
 
 if [[ "$(basename $0)" == "use-chromium-flags" ]]; then
 	echo "Script should be invoked through a symlink"
 	exit 1
 fi
+
+[[ -f "/etc/chromium-env.sh" ]] && source "/etc/chromium-env.sh"
+[[ -f "/etc/chromium-env-$(basename $0).sh" ]] && source "/etc/chromium-env-$(basename $0).sh"
 
 flags=$(parse-chromium-flags "/etc/chromium-flags.conf")
 extraflags=$(parse-chromium-flags "/etc/chromium-flags-$(basename $0).conf")
