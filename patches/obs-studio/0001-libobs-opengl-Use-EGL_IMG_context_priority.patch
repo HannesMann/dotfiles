@@ -1,4 +1,4 @@
-From 4ddad85fb900447ab3ea41ae606f7366b9141b1f Mon Sep 17 00:00:00 2001
+From 2993c0cdc261c18b208d3c24bdc09f21f10681a9 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Wed, 6 Mar 2024 02:14:51 +0100
 Subject: [PATCH 1/4] libobs-opengl: Use EGL_IMG_context_priority
@@ -41,7 +41,7 @@ index 0646f68b7..35174067e 100644
  if(TARGET OBS::python)
    find_package(Python REQUIRED COMPONENTS Interpreter Development)
 diff --git a/UI/window-basic-main.cpp b/UI/window-basic-main.cpp
-index 5cd8f8de2..666bb9a47 100644
+index 16916f28d..90921ac14 100644
 --- a/UI/window-basic-main.cpp
 +++ b/UI/window-basic-main.cpp
 @@ -105,6 +105,11 @@

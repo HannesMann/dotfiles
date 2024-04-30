@@ -1,4 +1,4 @@
-From 4c8dfc92ef7c563d9c4f0beb260bf3f21e6b67f7 Mon Sep 17 00:00:00 2001
+From 055d920c093071c004c7eacc3b4a77a5c814a4f0 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Wed, 6 Mar 2024 02:22:54 +0100
 Subject: [PATCH 4/4] obs-amf-test: Allow without AMDGPU-PRO

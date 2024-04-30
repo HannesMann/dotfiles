@@ -1,4 +1,4 @@
-From 6867e0241aa2056499caf035b8a9c57781214972 Mon Sep 17 00:00:00 2001
+From 629d9f19e9101f7940f401ca3e6c9c897a1ed556 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
 Date: Wed, 6 Mar 2024 02:19:14 +0100
 Subject: [PATCH 3/4] texture-amf: Override defaults, assume B-frames and
@@ -10,7 +10,7 @@ Subject: [PATCH 3/4] texture-amf: Override defaults, assume B-frames and
  2 files changed, 26 insertions(+), 124 deletions(-)
 
 diff --git a/plugins/obs-ffmpeg/CMakeLists.txt b/plugins/obs-ffmpeg/CMakeLists.txt
-index fd140631a..e951fd981 100644
+index 8dc0157fe..3cc57038b 100644
 --- a/plugins/obs-ffmpeg/CMakeLists.txt
 +++ b/plugins/obs-ffmpeg/CMakeLists.txt
 @@ -1,5 +1,8 @@

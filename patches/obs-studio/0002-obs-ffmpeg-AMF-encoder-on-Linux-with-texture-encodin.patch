@@ -1,6 +1,6 @@
-From 70cea232419d2377717b5a2ad4213faa7e987ffd Mon Sep 17 00:00:00 2001
+From dd71536c18d29de0ce2831d55f602bebac11f239 Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
-Date: Wed, 6 Mar 2024 02:17:44 +0100
+Date: Sun, 7 Apr 2024 04:24:04 +0200
 Subject: [PATCH 2/4] obs-ffmpeg: AMF encoder on Linux with texture encoding
 
 ---
@@ -9,15 +9,15 @@ Subject: [PATCH 2/4] obs-ffmpeg: AMF encoder on Linux with texture encoding
  libobs/obs-internal.h                         |   3 +
  libobs/obs-video-gpu-encode.c                 |   2 +-
  plugins/obs-ffmpeg/CMakeLists.txt             |   7 +-
- plugins/obs-ffmpeg/cmake/dependencies.cmake   |   5 +-
- plugins/obs-ffmpeg/cmake/legacy.cmake         |   6 +-
+ plugins/obs-ffmpeg/cmake/dependencies.cmake   |   6 +-
+ plugins/obs-ffmpeg/cmake/legacy.cmake         |  11 +-
  .../obs-ffmpeg/obs-amf-test/CMakeLists.txt    |  10 +-
  .../obs-amf-test/cmake/legacy.cmake           |  10 +-
  .../obs-amf-test/obs-amf-test-linux.cpp       | 140 +++
- plugins/obs-ffmpeg/obs-ffmpeg.c               |   6 +-
+ plugins/obs-ffmpeg/obs-ffmpeg.c               |   6 -
  plugins/obs-ffmpeg/texture-amf-opts.hpp       |   2 +-
  plugins/obs-ffmpeg/texture-amf.cpp            | 997 +++++++++++++++++-
- 13 files changed, 1158 insertions(+), 36 deletions(-)
+ 13 files changed, 1161 insertions(+), 39 deletions(-)
  create mode 100644 plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
 
 diff --git a/libobs/obs-encoder.c b/libobs/obs-encoder.c
@@ -83,7 +83,7 @@ index 4edfb2c53..8132128d3 100644
  				tex.tex[0] = tf.tex;
  				tex.tex[1] = tf.tex_uv;
 diff --git a/plugins/obs-ffmpeg/CMakeLists.txt b/plugins/obs-ffmpeg/CMakeLists.txt
-index 77c5ad8e4..fd140631a 100644
+index 4dffcb59f..8dc0157fe 100644
 --- a/plugins/obs-ffmpeg/CMakeLists.txt
 +++ b/plugins/obs-ffmpeg/CMakeLists.txt
 @@ -26,8 +26,8 @@ target_sources(
@@ -97,65 +97,80 @@ index 77c5ad8e4..fd140631a 100644
            obs-ffmpeg-audio-encoders.c
            obs-ffmpeg-av1.c
            obs-ffmpeg-compat.h
-@@ -60,12 +60,13 @@ target_link_libraries(
+@@ -60,13 +60,14 @@ target_link_libraries(
            FFmpeg::swresample
            $<$<PLATFORM_ID:Windows>:OBS::obs-nvenc-version>
            $<$<PLATFORM_ID:Windows>:OBS::w32-pthreads>
 -          $<$<PLATFORM_ID:Windows>:AMF::AMF>
-+          AMF::AMF>
++          AMF::AMF
            $<$<PLATFORM_ID:Windows>:FFnvcodec::FFnvcodec>
            $<$<PLATFORM_ID:Windows>:ws2_32>
            $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libva::va>
            $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libva::drm>
            $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libpci::pci>
+           $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libdrm::Libdrm>
 +          $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Vulkan::Vulkan>
            $<$<BOOL:${ENABLE_NEW_MPEGTS_OUTPUT}>:Librist::Librist>
            $<$<BOOL:${ENABLE_NEW_MPEGTS_OUTPUT}>:Libsrt::Libsrt>)
  
 diff --git a/plugins/obs-ffmpeg/cmake/dependencies.cmake b/plugins/obs-ffmpeg/cmake/dependencies.cmake
-index 5a52c751a..4d73a40d7 100644
+index 3110f4f4c..90c506598 100644
 --- a/plugins/obs-ffmpeg/cmake/dependencies.cmake
 +++ b/plugins/obs-ffmpeg/cmake/dependencies.cmake
 @@ -24,8 +24,9 @@ if(NOT TARGET OBS::opts-parser)
    add_subdirectory("${CMAKE_SOURCE_DIR}/deps/opts-parser" "${CMAKE_BINARY_DIR}/deps/opts-parser")
  endif()
  
-+find_package(AMF 1.4.29 REQUIRED)
++find_package(AMF 1.4.33 REQUIRED)
 +
  if(OS_WINDOWS)
 -  find_package(AMF 1.4.29 REQUIRED)
-   find_package(FFnvcodec 12 REQUIRED)
+   find_package(FFnvcodec 12.0.0.0...<12.2.0.0 REQUIRED)
  
    add_library(obs-nvenc-version INTERFACE)
-@@ -41,6 +42,8 @@ elseif(
-   OR OS_OPENBSD)
+@@ -42,6 +43,9 @@ elseif(
    find_package(Libva REQUIRED)
    find_package(Libpci REQUIRED)
+   find_package(Libdrm REQUIRED)
 +  find_package(Vulkan REQUIRED)
++
 +  add_subdirectory(obs-amf-test)
  endif()
  
  if(ENABLE_NEW_MPEGTS_OUTPUT)
 diff --git a/plugins/obs-ffmpeg/cmake/legacy.cmake b/plugins/obs-ffmpeg/cmake/legacy.cmake
-index b7d665c00..c7ba8461c 100644
+index 558a34df6..25f75624f 100644
 --- a/plugins/obs-ffmpeg/cmake/legacy.cmake
 +++ b/plugins/obs-ffmpeg/cmake/legacy.cmake
-@@ -108,11 +108,13 @@ if(OS_WINDOWS)
+@@ -83,8 +83,9 @@ endif()
+ 
+ set_target_properties(obs-ffmpeg PROPERTIES FOLDER "plugins/obs-ffmpeg" PREFIX "")
+ 
++find_package(AMF 1.4.33 REQUIRED)
++
+ if(OS_WINDOWS)
+-  find_package(AMF 1.4.29 REQUIRED)
+   find_package(FFnvcodec 12 REQUIRED)
+ 
+   add_subdirectory(obs-amf-test)
+@@ -109,11 +110,15 @@ if(OS_WINDOWS)
              obs-ffmpeg.rc)
  
  elseif(OS_POSIX AND NOT OS_MACOS)
 +  add_subdirectory(obs-amf-test)
++
    find_package(Libva REQUIRED)
    find_package(Libpci REQUIRED)
    find_package(Libdrm REQUIRED)
 -  target_sources(obs-ffmpeg PRIVATE obs-ffmpeg-vaapi.c vaapi-utils.c vaapi-utils.h)
 -  target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm LIBPCI::LIBPCI Libdrm::Libdrm)
 +  find_package(Vulkan REQUIRED)
++
 +  target_sources(obs-ffmpeg PRIVATE obs-ffmpeg-vaapi.c vaapi-utils.c vaapi-utils.h texture-amf.cpp)
-+  target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm LIBPCI::LIBPCI Vulkan::Vulkan)
- endif()
++  target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm LIBPCI::LIBPCI Libdrm::Libdrm Vulkan::Vulkan)
  
- setup_plugin_target(obs-ffmpeg)
+   if(ENABLE_NATIVE_NVENC)
+     find_package(FFnvcodec 12.0.0.0...<12.2.0.0 REQUIRED)
 diff --git a/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt b/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt
 index 6221c69df..93f1ee7d5 100644
 --- a/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt
@@ -345,21 +360,21 @@ index 000000000..db437d851
 +	return 0;
 +}
 diff --git a/plugins/obs-ffmpeg/obs-ffmpeg.c b/plugins/obs-ffmpeg/obs-ffmpeg.c
-index d58f00701..57011c0ba 100644
+index c20281f63..00dd65c99 100644
 --- a/plugins/obs-ffmpeg/obs-ffmpeg.c
 +++ b/plugins/obs-ffmpeg/obs-ffmpeg.c
-@@ -342,9 +342,9 @@ static bool hevc_vaapi_supported(void)
- #ifdef _WIN32
- extern void obs_nvenc_load(bool h264, bool hevc, bool av1);
+@@ -339,10 +339,8 @@ extern void obs_nvenc_load(bool h264, bool hevc, bool av1);
  extern void obs_nvenc_unload(void);
-+#endif
+ #endif
+ 
+-#ifdef _WIN32
  extern void amf_load(void);
  extern void amf_unload(void);
 -#endif
  
  #if ENABLE_FFMPEG_LOGGING
  extern void obs_ffmpeg_load_logging(void);
-@@ -395,9 +395,7 @@ bool obs_module_load(void)
+@@ -393,9 +391,7 @@ bool obs_module_load(void)
  #endif
  	}
  
@@ -369,16 +384,16 @@ index d58f00701..57011c0ba 100644
  
  #ifdef LIBAVUTIL_VAAPI_AVAILABLE
  	const char *libva_env = getenv("LIBVA_DRIVER_NAME");
-@@ -446,8 +444,8 @@ void obs_module_unload(void)
+@@ -444,9 +440,7 @@ void obs_module_unload(void)
  	obs_ffmpeg_unload_logging();
  #endif
  
 -#ifdef _WIN32
  	amf_unload();
-+#ifdef _WIN32
+-#endif
+ #ifdef OBS_NVENC_AVAILABLE
  	obs_nvenc_unload();
  #endif
- }
 diff --git a/plugins/obs-ffmpeg/texture-amf-opts.hpp b/plugins/obs-ffmpeg/texture-amf-opts.hpp
 index b1c37d200..d28e3f77e 100644
 --- a/plugins/obs-ffmpeg/texture-amf-opts.hpp

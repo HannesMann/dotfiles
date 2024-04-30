@@ -1,0 +1,5 @@
+#!/bin/bash
+# Disable any scaling to prevent artifacts
+export QT_ENABLE_HIGHDPI_SCALING=0
+export QT_FONT_DPI=96
+/usr/bin/xwaylandvideobridge
