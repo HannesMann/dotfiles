@@ -1,4 +1,2 @@
 #!/bin/bash
-export QT_QPA_PLATFORM=xcb
-echo -n obs-wrapper > /proc/$$/comm
-/usr/bin/obs
+/usr/bin/obs -platform xcb "$@"

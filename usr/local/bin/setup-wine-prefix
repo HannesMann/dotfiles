@@ -34,6 +34,7 @@ done < /tmp/user-wine-install.conf
 wineserver -p
 
 setup_dxvk install --symlink
+setup_dxvk_nvapi install --symlink
 setup_vkd3d_proton install --symlink
 
 wine regedit /etc/default-wine-overrides.reg

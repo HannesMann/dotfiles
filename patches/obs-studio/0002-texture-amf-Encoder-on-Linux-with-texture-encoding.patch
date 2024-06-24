@@ -1,27 +1,70 @@
-From dd71536c18d29de0ce2831d55f602bebac11f239 Mon Sep 17 00:00:00 2001
+From 2063b08e8b4bf0e1e3c38b0f0fa5c457e781b55b Mon Sep 17 00:00:00 2001
 From: Hannes Mann <hannesmann2000@gmail.com>
-Date: Sun, 7 Apr 2024 04:24:04 +0200
-Subject: [PATCH 2/4] obs-ffmpeg: AMF encoder on Linux with texture encoding
+Date: Sun, 16 Jun 2024 04:35:05 +0200
+Subject: [PATCH 2/3] texture-amf: Encoder on Linux with texture encoding
 
 ---
- libobs/obs-encoder.c                          |   4 +-
- libobs/obs-encoder.h                          |   2 +
- libobs/obs-internal.h                         |   3 +
- libobs/obs-video-gpu-encode.c                 |   2 +-
- plugins/obs-ffmpeg/CMakeLists.txt             |   7 +-
- plugins/obs-ffmpeg/cmake/dependencies.cmake   |   6 +-
- plugins/obs-ffmpeg/cmake/legacy.cmake         |  11 +-
- .../obs-ffmpeg/obs-amf-test/CMakeLists.txt    |  10 +-
- .../obs-amf-test/cmake/legacy.cmake           |  10 +-
- .../obs-amf-test/obs-amf-test-linux.cpp       | 140 +++
- plugins/obs-ffmpeg/obs-ffmpeg.c               |   6 -
- plugins/obs-ffmpeg/texture-amf-opts.hpp       |   2 +-
- plugins/obs-ffmpeg/texture-amf.cpp            | 997 +++++++++++++++++-
- 13 files changed, 1161 insertions(+), 39 deletions(-)
+ cmake/Modules/CompilerConfig.cmake            |    1 -
+ cmake/common/compiler_common.cmake            |    3 -
+ cmake/linux/compilerconfig.cmake              |    3 -
+ libobs/obs-encoder.c                          |    4 +-
+ libobs/obs-encoder.h                          |    2 +
+ libobs/obs-internal.h                         |    3 +
+ libobs/obs-video-gpu-encode.c                 |    2 +-
+ plugins/obs-ffmpeg/CMakeLists.txt             |    7 +-
+ plugins/obs-ffmpeg/cmake/dependencies.cmake   |    6 +-
+ plugins/obs-ffmpeg/cmake/legacy.cmake         |   13 +-
+ .../obs-ffmpeg/obs-amf-test/CMakeLists.txt    |   12 +-
+ .../obs-amf-test/cmake/legacy.cmake           |   10 +-
+ .../obs-amf-test/obs-amf-test-linux.cpp       |  140 +++
+ plugins/obs-ffmpeg/obs-ffmpeg.c               |    6 -
+ plugins/obs-ffmpeg/texture-amf-opts.hpp       |    2 +-
+ plugins/obs-ffmpeg/texture-amf.cpp            | 1015 ++++++++++++++++-
+ 16 files changed, 1171 insertions(+), 58 deletions(-)
  create mode 100644 plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
 
+diff --git a/cmake/Modules/CompilerConfig.cmake b/cmake/Modules/CompilerConfig.cmake
+index 849d19de7..e1d11d5c0 100644
+--- a/cmake/Modules/CompilerConfig.cmake
++++ b/cmake/Modules/CompilerConfig.cmake
+@@ -108,7 +108,6 @@ else()
+     - https://github.com/obsproject/obs-studio/issues/8850 for 13.1.1
+   ]]
+   add_compile_options(
+-    -Werror
+     -Wextra
+     -Wvla
+     -Wswitch
+diff --git a/cmake/common/compiler_common.cmake b/cmake/common/compiler_common.cmake
+index ccae3d220..cf3048a9a 100644
+--- a/cmake/common/compiler_common.cmake
++++ b/cmake/common/compiler_common.cmake
+@@ -34,9 +34,6 @@ set(_obs_clang_common_options
+     -Wswitch
+     -Wno-unused-function
+     -Wno-unused-label
+-    -Wunused-parameter
+-    -Wunused-variable
+-    -Wunused-value
+     -Wempty-body
+     -Wuninitialized
+     -Wno-unknown-pragmas
+diff --git a/cmake/linux/compilerconfig.cmake b/cmake/linux/compilerconfig.cmake
+index bc218df37..253bff3ce 100644
+--- a/cmake/linux/compilerconfig.cmake
++++ b/cmake/linux/compilerconfig.cmake
+@@ -35,9 +35,6 @@ set(_obs_gcc_c_options
+     -Wparentheses
+     -Wuninitialized
+     -Wunreachable-code
+-    -Wunused-parameter
+-    -Wunused-value
+-    -Wunused-variable
+     -Wvla)
+ 
+ add_compile_options(
 diff --git a/libobs/obs-encoder.c b/libobs/obs-encoder.c
-index 43361e56b..c084f684d 100644
+index c90786a09..31774c25e 100644
 --- a/libobs/obs-encoder.c
 +++ b/libobs/obs-encoder.c
 @@ -165,7 +165,7 @@ static inline void get_audio_info(const struct obs_encoder *encoder,
@@ -56,10 +99,10 @@ index 26d35a872..d28ed9001 100644
  	uint32_t handle;
  	/** Textures, length determined by format */
 diff --git a/libobs/obs-internal.h b/libobs/obs-internal.h
-index 0fc114b07..2c6ddbc9d 100644
+index 6c3ca8aa1..a26670011 100644
 --- a/libobs/obs-internal.h
 +++ b/libobs/obs-internal.h
-@@ -1307,6 +1307,9 @@ extern struct obs_encoder_info *find_encoder(const char *id);
+@@ -1346,6 +1346,9 @@ extern struct obs_encoder_info *find_encoder(const char *id);
  extern bool obs_encoder_initialize(obs_encoder_t *encoder);
  extern void obs_encoder_shutdown(obs_encoder_t *encoder);
  
@@ -70,10 +113,10 @@ index 0fc114b07..2c6ddbc9d 100644
  			      void (*new_packet)(void *param,
  						 struct encoder_packet *packet),
 diff --git a/libobs/obs-video-gpu-encode.c b/libobs/obs-video-gpu-encode.c
-index 4edfb2c53..8132128d3 100644
+index 96bd081ad..709c37784 100644
 --- a/libobs/obs-video-gpu-encode.c
 +++ b/libobs/obs-video-gpu-encode.c
-@@ -137,7 +137,7 @@ static void *gpu_encode_thread(void *data)
+@@ -148,7 +148,7 @@ static void *gpu_encode_thread(void *data)
  			profile_start(gpu_encode_frame_name);
  			if (encoder->info.encode_texture2) {
  				struct encoder_texture tex = {0};
@@ -83,38 +126,33 @@ index 4edfb2c53..8132128d3 100644
  				tex.tex[0] = tf.tex;
  				tex.tex[1] = tf.tex_uv;
 diff --git a/plugins/obs-ffmpeg/CMakeLists.txt b/plugins/obs-ffmpeg/CMakeLists.txt
-index 4dffcb59f..8dc0157fe 100644
+index 4a928c82c..4b6c14141 100644
 --- a/plugins/obs-ffmpeg/CMakeLists.txt
 +++ b/plugins/obs-ffmpeg/CMakeLists.txt
-@@ -26,8 +26,8 @@ target_sources(
-           $<$<PLATFORM_ID:Windows>:obs-nvenc-helpers.c>
-           $<$<PLATFORM_ID:Windows>:obs-nvenc.c>
-           $<$<PLATFORM_ID:Windows>:obs-nvenc.h>
+@@ -27,8 +27,8 @@ target_sources(
+           $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:obs-ffmpeg-vaapi.c>
+           $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:vaapi-utils.c>
+           $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:vaapi-utils.h>
 -          $<$<PLATFORM_ID:Windows>:texture-amf-opts.hpp>
 -          $<$<PLATFORM_ID:Windows>:texture-amf.cpp>
-+          texture-amf-opts.hpp>
-+          texture-amf.cpp>
++          $<$<PLATFORM_ID:Windows,Linux>:texture-amf-opts.hpp>
++          $<$<PLATFORM_ID:Windows,Linux>:texture-amf.cpp>
            obs-ffmpeg-audio-encoders.c
            obs-ffmpeg-av1.c
            obs-ffmpeg-compat.h
-@@ -60,13 +60,14 @@ target_link_libraries(
+@@ -61,8 +61,9 @@ target_link_libraries(
            FFmpeg::swresample
-           $<$<PLATFORM_ID:Windows>:OBS::obs-nvenc-version>
+           $<TARGET_NAME_IF_EXISTS:OBS::obs-nvenc-native>
            $<$<PLATFORM_ID:Windows>:OBS::w32-pthreads>
 -          $<$<PLATFORM_ID:Windows>:AMF::AMF>
-+          AMF::AMF
-           $<$<PLATFORM_ID:Windows>:FFnvcodec::FFnvcodec>
++          $<$<PLATFORM_ID:Windows,Linux>:AMF::AMF>
            $<$<PLATFORM_ID:Windows>:ws2_32>
++          $<$<PLATFORM_ID:Linux>:Vulkan::Vulkan>
            $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libva::va>
            $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libva::drm>
            $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libpci::pci>
-           $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Libdrm::Libdrm>
-+          $<$<PLATFORM_ID:Linux,FreeBSD,OpenBSD>:Vulkan::Vulkan>
-           $<$<BOOL:${ENABLE_NEW_MPEGTS_OUTPUT}>:Librist::Librist>
-           $<$<BOOL:${ENABLE_NEW_MPEGTS_OUTPUT}>:Libsrt::Libsrt>)
- 
 diff --git a/plugins/obs-ffmpeg/cmake/dependencies.cmake b/plugins/obs-ffmpeg/cmake/dependencies.cmake
-index 3110f4f4c..90c506598 100644
+index 087e8c256..063e19599 100644
 --- a/plugins/obs-ffmpeg/cmake/dependencies.cmake
 +++ b/plugins/obs-ffmpeg/cmake/dependencies.cmake
 @@ -24,8 +24,9 @@ if(NOT TARGET OBS::opts-parser)
@@ -125,10 +163,10 @@ index 3110f4f4c..90c506598 100644
 +
  if(OS_WINDOWS)
 -  find_package(AMF 1.4.29 REQUIRED)
-   find_package(FFnvcodec 12.0.0.0...<12.2.0.0 REQUIRED)
- 
-   add_library(obs-nvenc-version INTERFACE)
-@@ -42,6 +43,9 @@ elseif(
+   add_subdirectory(obs-amf-test)
+ elseif(
+   OS_LINUX
+@@ -34,6 +35,9 @@ elseif(
    find_package(Libva REQUIRED)
    find_package(Libpci REQUIRED)
    find_package(Libdrm REQUIRED)
@@ -137,9 +175,9 @@ index 3110f4f4c..90c506598 100644
 +  add_subdirectory(obs-amf-test)
  endif()
  
- if(ENABLE_NEW_MPEGTS_OUTPUT)
+ if(OS_WINDOWS OR (OS_LINUX AND ENABLE_NATIVE_NVENC))
 diff --git a/plugins/obs-ffmpeg/cmake/legacy.cmake b/plugins/obs-ffmpeg/cmake/legacy.cmake
-index 558a34df6..25f75624f 100644
+index 558a34df6..8a20f08aa 100644
 --- a/plugins/obs-ffmpeg/cmake/legacy.cmake
 +++ b/plugins/obs-ffmpeg/cmake/legacy.cmake
 @@ -83,8 +83,9 @@ endif()
@@ -153,10 +191,12 @@ index 558a34df6..25f75624f 100644
    find_package(FFnvcodec 12 REQUIRED)
  
    add_subdirectory(obs-amf-test)
-@@ -109,11 +110,15 @@ if(OS_WINDOWS)
+@@ -108,12 +109,16 @@ if(OS_WINDOWS)
+             obs-nvenc-ver.h
              obs-ffmpeg.rc)
  
- elseif(OS_POSIX AND NOT OS_MACOS)
+-elseif(OS_POSIX AND NOT OS_MACOS)
++elseif(OS_LINUX)
 +  add_subdirectory(obs-amf-test)
 +
    find_package(Libva REQUIRED)
@@ -166,16 +206,22 @@ index 558a34df6..25f75624f 100644
 -  target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm LIBPCI::LIBPCI Libdrm::Libdrm)
 +  find_package(Vulkan REQUIRED)
 +
-+  target_sources(obs-ffmpeg PRIVATE obs-ffmpeg-vaapi.c vaapi-utils.c vaapi-utils.h texture-amf.cpp)
-+  target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm LIBPCI::LIBPCI Libdrm::Libdrm Vulkan::Vulkan)
++  target_sources(obs-ffmpeg PRIVATE obs-ffmpeg-vaapi.c vaapi-utils.c vaapi-utils.h texture-amf.cpp texture-amf-opts.hpp)
++  target_link_libraries(obs-ffmpeg PRIVATE Libva::va Libva::drm LIBPCI::LIBPCI Libdrm::Libdrm Vulkan::Vulkan AMF::AMF)
  
    if(ENABLE_NATIVE_NVENC)
      find_package(FFnvcodec 12.0.0.0...<12.2.0.0 REQUIRED)
 diff --git a/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt b/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt
-index 6221c69df..93f1ee7d5 100644
+index 6221c69df..a4db6d76e 100644
 --- a/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt
 +++ b/plugins/obs-ffmpeg/obs-amf-test/CMakeLists.txt
-@@ -7,8 +7,14 @@ find_package(AMF 1.4.29 REQUIRED)
+@@ -2,13 +2,19 @@ cmake_minimum_required(VERSION 3.24...3.25)
+ 
+ legacy_check()
+ 
+-find_package(AMF 1.4.29 REQUIRED)
++find_package(AMF 1.4.33 REQUIRED)
+ 
  add_executable(obs-amf-test)
  add_executable(OBS::amf-test ALIAS obs-amf-test)
  
@@ -184,7 +230,7 @@ index 6221c69df..93f1ee7d5 100644
 +if(OS_WINDOWS)
 +  target_sources(obs-amf-test PRIVATE obs-amf-test.cpp)
 +  target_link_libraries(obs-amf-test PRIVATE OBS::COMutils AMF::AMF d3d11 dxgi dxguid)
-+elseif(OS_POSIX AND NOT OS_MACOS)
++elseif(OS_LINUX)
 +  find_package(Vulkan REQUIRED)
 +  target_sources(obs-amf-test PRIVATE obs-amf-test-linux.cpp)
 +  target_link_libraries(obs-amf-test dl Vulkan::Vulkan AMF::AMF)
@@ -193,7 +239,7 @@ index 6221c69df..93f1ee7d5 100644
  # cmake-format: off
  set_target_properties_obs(obs-amf-test PROPERTIES FOLDER plugins/obs-ffmpeg)
 diff --git a/plugins/obs-ffmpeg/obs-amf-test/cmake/legacy.cmake b/plugins/obs-ffmpeg/obs-amf-test/cmake/legacy.cmake
-index e00cef1cf..07cf1e0fc 100644
+index e00cef1cf..cd14c367a 100644
 --- a/plugins/obs-ffmpeg/obs-amf-test/cmake/legacy.cmake
 +++ b/plugins/obs-ffmpeg/obs-amf-test/cmake/legacy.cmake
 @@ -6,8 +6,14 @@ find_package(AMF 1.4.29 REQUIRED)
@@ -205,7 +251,7 @@ index e00cef1cf..07cf1e0fc 100644
 +if(OS_WINDOWS)
 +  target_sources(obs-amf-test PRIVATE obs-amf-test.cpp)
 +  target_link_libraries(obs-amf-test d3d11 dxgi dxguid AMF::AMF)
-+elseif(OS_POSIX AND NOT OS_MACOS)
++elseif(OS_LINUX)
 +  find_package(Vulkan REQUIRED)
 +  target_sources(obs-amf-test PRIVATE obs-amf-test-linux.cpp)
 +  target_link_libraries(obs-amf-test dl Vulkan::Vulkan AMF::AMF)
@@ -215,7 +261,7 @@ index e00cef1cf..07cf1e0fc 100644
  
 diff --git a/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp b/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
 new file mode 100644
-index 000000000..db437d851
+index 000000000..3e0c9b3e7
 --- /dev/null
 +++ b/plugins/obs-ffmpeg/obs-amf-test/obs-amf-test-linux.cpp
 @@ -0,0 +1,140 @@
@@ -320,7 +366,7 @@ index 000000000..db437d851
 +	vkGetPhysicalDeviceProperties2(devices[0], &device_props);
 +
 +	if (strcmp(driver_props.driverName, "AMD proprietary driver"))
-+		throw "Not running AMD proprietary driver";
++		printf("warning: not running AMD proprietary driver\n");
 +
 +	vkDestroyInstance(instance, nullptr);
 +
@@ -408,7 +454,7 @@ index b1c37d200..d28e3f77e 100644
  			bool bool_val = (bool)val;
  			set_amf_property(enc, wname, bool_val);
 diff --git a/plugins/obs-ffmpeg/texture-amf.cpp b/plugins/obs-ffmpeg/texture-amf.cpp
-index 7a698931b..b1e07cfcb 100644
+index 0bdc71cc5..10cbf6297 100644
 --- a/plugins/obs-ffmpeg/texture-amf.cpp
 +++ b/plugins/obs-ffmpeg/texture-amf.cpp
 @@ -11,6 +11,7 @@
@@ -662,7 +708,7 @@ index 7a698931b..b1e07cfcb 100644
  
  	void AMF_STD_CALL OnSurfaceDataRelease(amf::AMFSurface *surf) override
  	{
-@@ -158,9 +335,187 @@ struct amf_texencode : amf_base, public AMFSurfaceObserver {
+@@ -158,9 +335,190 @@ struct amf_texencode : amf_base, public AMFSurfaceObserver {
  
  	void init() override
  	{
@@ -723,14 +769,17 @@ index 7a698931b..b1e07cfcb 100644
 +				VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 +			props.pNext = &driverProps;
 +			vkGetPhysicalDeviceProperties2(dev, &props);
-+			if (driverProps.driverID ==
-+			    VK_DRIVER_ID_AMD_PROPRIETARY) {
++			blog(LOG_INFO, "[texture-amf] Found device %s (%s)", driverProps.driverName, driverProps.driverInfo);
++			if(driverProps.driverID == VK_DRIVER_ID_MESA_RADV ||
++				driverProps.driverID == VK_DRIVER_ID_AMD_OPEN_SOURCE ||
++				driverProps.driverID == VK_DRIVER_ID_AMD_PROPRIETARY) {
++				blog(LOG_INFO, "[texture-amf] Picked device %s (%s)", driverProps.driverName, driverProps.driverInfo);
 +				vk->hPhysicalDevice = dev;
 +				break;
 +			}
 +		}
 +		if (!vk->hPhysicalDevice) {
-+			throw "Failed to find Vulkan device VK_DRIVER_ID_AMD_PROPRIETARY";
++			throw "Failed to find AMD Vulkan device";
 +		}
 +
 +		uint32_t deviceExtensionCount = 0;
@@ -850,7 +899,7 @@ index 7a698931b..b1e07cfcb 100644
  	}
  };
  
-@@ -190,9 +545,15 @@ struct amf_fallback : amf_base, public AMFSurfaceObserver {
+@@ -190,9 +548,15 @@ struct amf_fallback : amf_base, public AMFSurfaceObserver {
  
  	void init() override
  	{
@@ -866,7 +915,7 @@ index 7a698931b..b1e07cfcb 100644
  	}
  };
  
-@@ -234,13 +595,18 @@ static void set_amf_property(amf_base *enc, const wchar_t *name, const T &value)
+@@ -234,13 +598,18 @@ static void set_amf_property(amf_base *enc, const wchar_t *name, const T &value)
  	 : (enc->codec == amf_codec_type::HEVC)                         \
  		 ? AMF_VIDEO_ENCODER_HEVC_##name                        \
  		 : AMF_VIDEO_ENCODER_AV1_##name)
@@ -886,7 +935,7 @@ index 7a698931b..b1e07cfcb 100644
  #define set_avc_enum(name, value) \
  	set_avc_property(enc, name, AMF_VIDEO_ENCODER_##name##_##value)
  #define set_hevc_enum(name, value) \
-@@ -251,6 +617,7 @@ static void set_amf_property(amf_base *enc, const wchar_t *name, const T &value)
+@@ -251,6 +620,7 @@ static void set_amf_property(amf_base *enc, const wchar_t *name, const T &value)
  /* ------------------------------------------------------------------------- */
  /* Implementation                                                            */
  
@@ -894,7 +943,7 @@ index 7a698931b..b1e07cfcb 100644
  static HMODULE get_lib(const char *lib)
  {
  	HMODULE mod = GetModuleHandleA(lib);
-@@ -397,6 +764,362 @@ static void get_tex_from_handle(amf_texencode *enc, uint32_t handle,
+@@ -397,6 +767,362 @@ static void get_tex_from_handle(amf_texencode *enc, uint32_t handle,
  	*km_out = km.Detach();
  	*tex_out = tex.Detach();
  }
@@ -1257,7 +1306,7 @@ index 7a698931b..b1e07cfcb 100644
  
  static constexpr amf_int64 macroblock_size = 16;
  
-@@ -513,7 +1236,7 @@ static void convert_to_encoder_packet(amf_base *enc, AMFDataPtr &data,
+@@ -513,7 +1239,7 @@ static void convert_to_encoder_packet(amf_base *enc, AMFDataPtr &data,
  	enc->packet_data = AMFBufferPtr(data);
  	data->GetProperty(L"PTS", &packet->pts);
  
@@ -1266,7 +1315,7 @@ index 7a698931b..b1e07cfcb 100644
  	switch (enc->codec) {
  	case amf_codec_type::AVC:
  		get_output_type = AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE;
-@@ -623,6 +1346,8 @@ static void roi_cb(void *param, obs_encoder_roi *roi)
+@@ -623,6 +1349,8 @@ static void roi_cb(void *param, obs_encoder_roi *roi)
  
  static void create_roi(amf_base *enc, AMFSurface *amf_surf)
  {
@@ -1275,7 +1324,7 @@ index 7a698931b..b1e07cfcb 100644
  	uint32_t mb_size = 16; /* H.264 is always 16x16 */
  	if (enc->codec == amf_codec_type::HEVC ||
  	    enc->codec == amf_codec_type::AV1)
-@@ -746,6 +1471,7 @@ static void amf_encode_base(amf_base *enc, AMFSurface *amf_surf,
+@@ -746,6 +1474,7 @@ static void amf_encode_base(amf_base *enc, AMFSurface *amf_surf,
  static bool amf_encode_tex(void *data, uint32_t handle, int64_t pts,
  			   uint64_t lock_key, uint64_t *next_key,
  			   encoder_packet *packet, bool *received_packet)
@@ -1283,7 +1332,7 @@ index 7a698931b..b1e07cfcb 100644
  try {
  	amf_texencode *enc = (amf_texencode *)data;
  	ID3D11DeviceContext *context = enc->context;
-@@ -822,6 +1548,209 @@ try {
+@@ -822,6 +1551,209 @@ try {
  	*received_packet = false;
  	return false;
  }
@@ -1493,7 +1542,7 @@ index 7a698931b..b1e07cfcb 100644
  
  static buf_t alloc_buf(amf_fallback *enc)
  {
-@@ -1083,6 +2012,8 @@ try {
+@@ -1082,6 +2014,8 @@ try {
  	if (res != AMF_OK)
  		throw amf_error("CreateContext failed", res);
  
@@ -1502,7 +1551,7 @@ index 7a698931b..b1e07cfcb 100644
  	enc->init();
  
  	const wchar_t *codec = nullptr;
-@@ -1287,6 +2218,7 @@ static const char *amf_avc_get_name(void *)
+@@ -1286,6 +2220,7 @@ static const char *amf_avc_get_name(void *)
  
  static inline int get_avc_preset(amf_base *enc, const char *preset)
  {
@@ -1510,7 +1559,7 @@ index 7a698931b..b1e07cfcb 100644
  	if (astrcmpi(preset, "quality") == 0)
  		return AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY;
  	else if (astrcmpi(preset, "speed") == 0)
-@@ -1409,7 +2341,7 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
+@@ -1408,7 +2343,7 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
  		}
  
  	} else if (bf != 0) {
@@ -1519,7 +1568,7 @@ index 7a698931b..b1e07cfcb 100644
  		     "supported by this device",
  		     bf);
  		bf = 0;
-@@ -1454,12 +2386,12 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
+@@ -1453,12 +2388,12 @@ static bool amf_avc_init(void *data, obs_data_t *settings)
  
  	info("settings:\n"
  	     "\trate_control: %s\n"
@@ -1535,7 +1584,7 @@ index 7a698931b..b1e07cfcb 100644
  	     "\twidth:        %d\n"
  	     "\theight:       %d\n"
  	     "\tparams:       %s",
-@@ -1539,8 +2471,10 @@ try {
+@@ -1538,8 +2473,10 @@ try {
  	enc->encoder = encoder;
  	enc->encoder_str = "texture-amf-h264";
  
@@ -1546,7 +1595,7 @@ index 7a698931b..b1e07cfcb 100644
  
  	amf_avc_create_internal(enc.get(), settings);
  	return enc.release();
-@@ -1615,6 +2549,7 @@ static void register_avc()
+@@ -1614,6 +2551,7 @@ static void register_avc()
  	amf_encoder_info.destroy = amf_destroy;
  	amf_encoder_info.update = amf_avc_update;
  	amf_encoder_info.encode_texture = amf_encode_tex;
@@ -1554,7 +1603,7 @@ index 7a698931b..b1e07cfcb 100644
  	amf_encoder_info.get_defaults = amf_defaults;
  	amf_encoder_info.get_properties = amf_avc_properties;
  	amf_encoder_info.get_extra_data = amf_extra_data;
-@@ -1629,6 +2564,7 @@ static void register_avc()
+@@ -1628,6 +2566,7 @@ static void register_avc()
  				OBS_ENCODER_CAP_DYN_BITRATE |
  				OBS_ENCODER_CAP_ROI;
  	amf_encoder_info.encode_texture = nullptr;
@@ -1562,7 +1611,7 @@ index 7a698931b..b1e07cfcb 100644
  	amf_encoder_info.create = amf_avc_create_fallback;
  	amf_encoder_info.encode = amf_encode_fallback;
  	amf_encoder_info.get_video_info = h264_video_info_fallback;
-@@ -1648,6 +2584,7 @@ static const char *amf_hevc_get_name(void *)
+@@ -1647,6 +2586,7 @@ static const char *amf_hevc_get_name(void *)
  
  static inline int get_hevc_preset(amf_base *enc, const char *preset)
  {
@@ -1570,7 +1619,7 @@ index 7a698931b..b1e07cfcb 100644
  	if (astrcmpi(preset, "balanced") == 0)
  		return AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED;
  	else if (astrcmpi(preset, "speed") == 0)
-@@ -1771,8 +2708,8 @@ static bool amf_hevc_init(void *data, obs_data_t *settings)
+@@ -1770,8 +2710,8 @@ static bool amf_hevc_init(void *data, obs_data_t *settings)
  
  	info("settings:\n"
  	     "\trate_control: %s\n"
@@ -1581,7 +1630,7 @@ index 7a698931b..b1e07cfcb 100644
  	     "\tkeyint:       %d\n"
  	     "\tpreset:       %s\n"
  	     "\tprofile:      %s\n"
-@@ -1900,8 +2837,10 @@ try {
+@@ -1899,8 +2839,10 @@ try {
  	enc->encoder = encoder;
  	enc->encoder_str = "texture-amf-h265";
  
@@ -1592,7 +1641,7 @@ index 7a698931b..b1e07cfcb 100644
  
  	amf_hevc_create_internal(enc.get(), settings);
  	return enc.release();
-@@ -1972,6 +2911,7 @@ static void register_hevc()
+@@ -1971,6 +2913,7 @@ static void register_hevc()
  	amf_encoder_info.destroy = amf_destroy;
  	amf_encoder_info.update = amf_hevc_update;
  	amf_encoder_info.encode_texture = amf_encode_tex;
@@ -1600,7 +1649,7 @@ index 7a698931b..b1e07cfcb 100644
  	amf_encoder_info.get_defaults = amf_defaults;
  	amf_encoder_info.get_properties = amf_hevc_properties;
  	amf_encoder_info.get_extra_data = amf_extra_data;
-@@ -1986,6 +2926,7 @@ static void register_hevc()
+@@ -1985,6 +2928,7 @@ static void register_hevc()
  				OBS_ENCODER_CAP_DYN_BITRATE |
  				OBS_ENCODER_CAP_ROI;
  	amf_encoder_info.encode_texture = nullptr;
@@ -1608,7 +1657,7 @@ index 7a698931b..b1e07cfcb 100644
  	amf_encoder_info.create = amf_hevc_create_fallback;
  	amf_encoder_info.encode = amf_encode_fallback;
  	amf_encoder_info.get_video_info = h265_video_info_fallback;
-@@ -2005,6 +2946,7 @@ static const char *amf_av1_get_name(void *)
+@@ -2004,6 +2948,7 @@ static const char *amf_av1_get_name(void *)
  
  static inline int get_av1_preset(amf_base *enc, const char *preset)
  {
@@ -1616,7 +1665,7 @@ index 7a698931b..b1e07cfcb 100644
  	if (astrcmpi(preset, "highquality") == 0)
  		return AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY;
  	else if (astrcmpi(preset, "quality") == 0)
-@@ -2143,8 +3085,8 @@ static bool amf_av1_init(void *data, obs_data_t *settings)
+@@ -2142,8 +3087,8 @@ static bool amf_av1_init(void *data, obs_data_t *settings)
  
  	info("settings:\n"
  	     "\trate_control: %s\n"
@@ -1627,7 +1676,7 @@ index 7a698931b..b1e07cfcb 100644
  	     "\tkeyint:       %d\n"
  	     "\tpreset:       %s\n"
  	     "\tprofile:      %s\n"
-@@ -2219,8 +3161,10 @@ try {
+@@ -2218,8 +3163,10 @@ try {
  	enc->encoder = encoder;
  	enc->encoder_str = "texture-amf-av1";
  
@@ -1638,7 +1687,7 @@ index 7a698931b..b1e07cfcb 100644
  
  	amf_av1_create_internal(enc.get(), settings);
  	return enc.release();
-@@ -2301,6 +3245,7 @@ static void register_av1()
+@@ -2300,6 +3247,7 @@ static void register_av1()
  	amf_encoder_info.destroy = amf_destroy;
  	amf_encoder_info.update = amf_av1_update;
  	amf_encoder_info.encode_texture = amf_encode_tex;
@@ -1646,7 +1695,7 @@ index 7a698931b..b1e07cfcb 100644
  	amf_encoder_info.get_defaults = amf_av1_defaults;
  	amf_encoder_info.get_properties = amf_av1_properties;
  	amf_encoder_info.get_extra_data = amf_extra_data;
-@@ -2315,6 +3260,7 @@ static void register_av1()
+@@ -2314,6 +3262,7 @@ static void register_av1()
  				OBS_ENCODER_CAP_DYN_BITRATE |
  				OBS_ENCODER_CAP_ROI;
  	amf_encoder_info.encode_texture = nullptr;
@@ -1654,7 +1703,7 @@ index 7a698931b..b1e07cfcb 100644
  	amf_encoder_info.create = amf_av1_create_fallback;
  	amf_encoder_info.encode = amf_encode_fallback;
  	amf_encoder_info.get_video_info = av1_video_info_fallback;
-@@ -2333,9 +3279,16 @@ static bool enum_luids(void *param, uint32_t idx, uint64_t luid)
+@@ -2332,9 +3281,16 @@ static bool enum_luids(void *param, uint32_t idx, uint64_t luid)
  	return true;
  }
  
@@ -1671,7 +1720,7 @@ index 7a698931b..b1e07cfcb 100644
  	HMODULE amf_module_test;
  
  	/* Check if the DLL is present before running the more expensive */
-@@ -2345,18 +3298,26 @@ try {
+@@ -2344,20 +3300,24 @@ try {
  	if (!amf_module_test)
  		throw "No AMF library";
  	FreeLibrary(amf_module_test);
@@ -1686,20 +1735,32 @@ index 7a698931b..b1e07cfcb 100644
  	/* Check for supported codecs          */
  
 -	BPtr<char> test_exe = os_get_executable_path_ptr("obs-amf-test.exe");
+-	std::stringstream cmd;
 +	BPtr<char> test_exe = os_get_executable_path_ptr(OBS_AMF_TEST);
- 	std::stringstream cmd;
  	std::string caps_str;
- 
- 	cmd << '"';
- 	cmd << test_exe;
- 	cmd << '"';
+-
+-	cmd << '"';
+-	cmd << test_exe;
+-	cmd << '"';
 +#ifdef _WIN32
  	enum_graphics_device_luids(enum_luids, &cmd);
 +#endif
  
- 	os_process_pipe_t *pp = os_process_pipe_create(cmd.str().c_str(), "r");
+-	os_process_pipe_t *pp = os_process_pipe_create(cmd.str().c_str(), "r");
++	os_process_args* args = os_process_args_create(test_exe);
++	os_process_pipe_t *pp = os_process_pipe_create2(args, "r");
  	if (!pp)
-@@ -2416,12 +3377,12 @@ try {
+ 		throw "Failed to launch the AMF test process I guess";
+ 
+@@ -2372,6 +3332,7 @@ try {
+ 	}
+ 
+ 	os_process_pipe_destroy(pp);
++	os_process_args_destroy(args);
+ 
+ 	if (caps_str.empty())
+ 		throw "Seems the AMF test subprocess crashed. "
+@@ -2415,12 +3376,12 @@ try {
  	/* ----------------------------------- */
  	/* Init AMF                            */
  
@@ -1714,7 +1775,7 @@ index 7a698931b..b1e07cfcb 100644
  	if (!init)
  		throw "Failed to get AMFInit address";
  
-@@ -2433,7 +3394,7 @@ try {
+@@ -2432,7 +3393,7 @@ try {
  	if (res != AMF_OK)
  		throw amf_error("GetTrace failed", res);
  
@@ -1723,7 +1784,20 @@ index 7a698931b..b1e07cfcb 100644
  		amf_module, AMF_QUERY_VERSION_FUNCTION_NAME);
  	if (!get_ver)
  		throw "Failed to get AMFQueryVersion address";
-@@ -2472,7 +3433,7 @@ try {
+@@ -2441,10 +3402,8 @@ try {
+ 	if (res != AMF_OK)
+ 		throw amf_error("AMFQueryVersion failed", res);
+ 
+-#ifndef DEBUG_AMF_STUFF
+-	amf_trace->EnableWriter(AMF_TRACE_WRITER_DEBUG_OUTPUT, false);
+-	amf_trace->EnableWriter(AMF_TRACE_WRITER_CONSOLE, false);
+-#endif
++	amf_trace->EnableWriter(AMF_TRACE_WRITER_CONSOLE, true);
++	amf_trace->SetWriterLevel(AMF_TRACE_WRITER_CONSOLE, AMF_TRACE_INFO);
+ 
+ 	/* ----------------------------------- */
+ 	/* Register encoders                   */
+@@ -2471,7 +3430,7 @@ try {
  } catch (const amf_error &err) {
  	/* doing an error here because it means at least the library has loaded
  	 * successfully, so they probably have AMD at this point */
@@ -1733,5 +1807,5 @@ index 7a698931b..b1e07cfcb 100644
  }
  
 -- 
-2.44.0
+2.45.2
 
