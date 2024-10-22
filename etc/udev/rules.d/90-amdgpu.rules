@@ -1,5 +1,6 @@
 # Disable power saving features
-SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{pp_features}="0x2743a36c0dff"
+ACTION=="add|change", SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{vendor}=="0x1002", ATTR{device}=="0x73df", ATTR{pp_features}="0x1743a36c0dff"
 # Set power profile to VR
-SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{power_dpm_force_performance_level}="manual"
-SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{pp_power_profile_mode}="4"
+ACTION=="add|change", SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{vendor}=="0x1002", ATTR{device}=="0x73df", ATTR{power_dpm_force_performance_level}="manual"
+ACTION=="add|change", SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{vendor}=="0x1002", ATTR{device}=="0x73df", ATTR{pp_power_profile_mode}="4"
+ACTION=="add|change", SUBSYSTEM=="pci", DRIVERS=="amdgpu", ATTR{vendor}=="0x1002", ATTR{device}=="0x73df", RUN+="cat /sys$devpath/hwmon/hwmon1/power1_cap_max > /sys$devpath/hwmon/hwmon1/power1_cap"

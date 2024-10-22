@@ -1,0 +1,258 @@
+From c042dae77e66abefb8b32dd29acbeb5efa24348e Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Wed, 24 Jul 2024 06:29:47 +0200
+Subject: [PATCH 1/2] xwayland: Use exact values for RANDR modes
+
+---
+ hw/xwayland/meson.build                       |  4 +-
+ hw/xwayland/xwayland-cvt.c                    | 80 -------------------
+ hw/xwayland/xwayland-output.c                 | 10 +--
+ hw/xwayland/xwayland-randr.c                  | 56 +++++++++++++
+ .../{xwayland-cvt.h => xwayland-randr.h}      |  9 +--
+ 5 files changed, 67 insertions(+), 92 deletions(-)
+ delete mode 100644 hw/xwayland/xwayland-cvt.c
+ create mode 100644 hw/xwayland/xwayland-randr.c
+ rename hw/xwayland/{xwayland-cvt.h => xwayland-randr.h} (85%)
+
+diff --git a/hw/xwayland/meson.build b/hw/xwayland/meson.build
+index 460c57300..9d41d3c81 100644
+--- a/hw/xwayland/meson.build
++++ b/hw/xwayland/meson.build
+@@ -18,8 +18,8 @@ srcs = [
+     'xwayland-types.h',
+     'xwayland-output.c',
+     'xwayland-output.h',
+-    'xwayland-cvt.c',
+-    'xwayland-cvt.h',
++    'xwayland-randr.c',
++    'xwayland-randr.h',
+     'xwayland-vidmode.c',
+     'xwayland-vidmode.h',
+     'xwayland-window.c',
+diff --git a/hw/xwayland/xwayland-cvt.c b/hw/xwayland/xwayland-cvt.c
+deleted file mode 100644
+index 4248d3869..000000000
+--- a/hw/xwayland/xwayland-cvt.c
++++ /dev/null
+@@ -1,80 +0,0 @@
+-/*
+- * Copyright 2005-2006 Luc Verhaegen.
+- * Copyright © 2021 Red Hat, Inc.
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining a
+- * copy of this software and associated documentation files (the "Software"),
+- * to deal in the Software without restriction, including without limitation
+- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+- * and/or sell copies of the Software, and to permit persons to whom the
+- * Software is furnished to do so, subject to the following conditions:
+- *
+- * The above copyright notice and this permission notice shall be included in
+- * all copies or substantial portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+- * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
+- * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+- * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+- * OTHER DEALINGS IN THE SOFTWARE.
+- */
+-
+-#include <xwayland-config.h>
+-
+-#include <string.h>
+-#include <randrstr.h>
+-#include <libxcvt/libxcvt.h>
+-
+-#include "xwayland-cvt.h"
+-
+-static void
+-xwayland_modeinfo_from_cvt(xRRModeInfo *modeinfo,
+-                           int hdisplay, int vdisplay, float vrefresh,
+-                           Bool reduced, Bool interlaced)
+-{
+-    struct libxcvt_mode_info *libxcvt_mode_info;
+-
+-    libxcvt_mode_info =
+-        libxcvt_gen_mode_info(hdisplay, vdisplay, vrefresh, reduced, interlaced);
+-
+-    modeinfo->width      = libxcvt_mode_info->hdisplay;
+-    modeinfo->height     = libxcvt_mode_info->vdisplay;
+-    modeinfo->dotClock   = libxcvt_mode_info->dot_clock * 1000.0;
+-    modeinfo->hSyncStart = libxcvt_mode_info->hsync_start;
+-    modeinfo->hSyncEnd   = libxcvt_mode_info->hsync_end;
+-    modeinfo->hTotal     = libxcvt_mode_info->htotal;
+-    modeinfo->vSyncStart = libxcvt_mode_info->vsync_start;
+-    modeinfo->vSyncEnd   = libxcvt_mode_info->vsync_end;
+-    modeinfo->vTotal     = libxcvt_mode_info->vtotal;
+-    modeinfo->modeFlags  = libxcvt_mode_info->mode_flags;
+-
+-    free(libxcvt_mode_info);
+-}
+-
+-RRModePtr
+-xwayland_cvt(int hdisplay, int vdisplay, float vrefresh, Bool reduced,
+-             Bool interlaced)
+-{
+-    char name[128];
+-    xRRModeInfo modeinfo = { 0, };
+-
+-    xwayland_modeinfo_from_cvt(&modeinfo,
+-                               hdisplay, vdisplay, vrefresh, reduced, interlaced);
+-
+-    /* Horizontal granularity in libxcvt is 8, so if our horizontal size is not
+-     * divisible by 8, libxcvt will round it up, and we will advertise a wrong
+-     * size to our XRandR clients.
+-     * Force the width/height (i.e. simply increase blanking which should not
+-     * hurt anything), keeping the rest of the CVT mode timings unchanged.
+-     */
+-    modeinfo.width = hdisplay;
+-    modeinfo.height = vdisplay;
+-
+-    snprintf(name, sizeof name, "%dx%d",
+-             modeinfo.width, modeinfo.height);
+-    modeinfo.nameLength = strlen(name);
+-
+-    return RRModeGet(&modeinfo, name);
+-}
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index 7c8ebd49a..bcce9189f 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -32,7 +32,7 @@
+ #include "dix/dix_priv.h"
+ #include "randr/randrstr_priv.h"
+ 
+-#include "xwayland-cvt.h"
++#include "xwayland-randr.h"
+ #include "xwayland-output.h"
+ #include "xwayland-screen.h"
+ #include "xwayland-window.h"
+@@ -362,7 +362,7 @@ output_get_rr_modes(struct xwl_output *xwl_output,
+         goto err;
+ 
+     /* Add actual output mode */
+-    rr_modes[0] = xwayland_cvt(width, height, xwl_output->refresh / 1000.0, 0, 0);
++    rr_modes[0] = xwayland_randr_mode(width, height, xwl_output->refresh / 1000.0, 0, 0);
+     if (!rr_modes[0])
+         goto err;
+ 
+@@ -383,7 +383,7 @@ output_get_rr_modes(struct xwl_output *xwl_output,
+             xwl_output_fake_modes[i][1] > height)
+             continue;
+ 
+-        rr_modes[*count] = xwayland_cvt(xwl_output_fake_modes[i][0],
++        rr_modes[*count] = xwayland_randr_mode(xwl_output_fake_modes[i][0],
+                                         xwl_output_fake_modes[i][1],
+                                         xwl_output->refresh / 1000.0, 0, 0);
+         if (!rr_modes[*count])
+@@ -1236,7 +1236,7 @@ xwl_randr_add_modes_fixed(struct xwl_output *xwl_output,
+             xwl_output_fake_modes[i][1] == current_height)
+             current = 1;
+ 
+-        mode = xwayland_cvt(xwl_output_fake_modes[i][0],
++        mode = xwayland_randr_mode(xwl_output_fake_modes[i][0],
+                             xwl_output_fake_modes[i][1],
+                             60, 0, 0);
+ 
+@@ -1246,7 +1246,7 @@ xwl_randr_add_modes_fixed(struct xwl_output *xwl_output,
+ 
+     if (!current) {
+         /* Add the current mode as it's not part of the fake modes. */
+-        mode = xwayland_cvt(current_width, current_height, 60, 0, 0);
++        mode = xwayland_randr_mode(current_width, current_height, 60, 0, 0);
+ 
+         if (mode)
+             modes[nmodes++] = mode;
+diff --git a/hw/xwayland/xwayland-randr.c b/hw/xwayland/xwayland-randr.c
+new file mode 100644
+index 000000000..469e7b4cd
+--- /dev/null
++++ b/hw/xwayland/xwayland-randr.c
+@@ -0,0 +1,56 @@
++/*
++ * Copyright 2005-2006 Luc Verhaegen.
++ * Copyright © 2021 Red Hat, Inc.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
++ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
++ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
++ * OTHER DEALINGS IN THE SOFTWARE.
++ */
++
++#include <xwayland-config.h>
++
++#include <string.h>
++#include <randrstr.h>
++
++#include "xwayland-randr.h"
++
++static void
++xwayland_modinfo_from_values(xRRModeInfo *modeinfo,
++                             int hdisplay, int vdisplay, float vrefresh)
++{
++    modeinfo->width  = hdisplay;
++    modeinfo->height = vdisplay;
++    modeinfo->hTotal = hdisplay;
++    modeinfo->vTotal = vdisplay;
++    modeinfo->dotClock = hdisplay * vdisplay * vrefresh;
++}
++
++RRModePtr
++xwayland_randr_mode(int hdisplay, int vdisplay, float vrefresh, Bool reduced, Bool interlaced)
++{
++    char name[128];
++    xRRModeInfo modeinfo;
++    memset(&modeinfo, 0, sizeof(xRRModeInfo));
++
++    xwayland_modinfo_from_values(&modeinfo, hdisplay, vdisplay, vrefresh);
++
++    snprintf(name, sizeof name, "%dx%d",
++             modeinfo.width, modeinfo.height);
++    modeinfo.nameLength = strlen(name);
++
++    return RRModeGet(&modeinfo, name);
++}
+diff --git a/hw/xwayland/xwayland-cvt.h b/hw/xwayland/xwayland-randr.h
+similarity index 85%
+rename from hw/xwayland/xwayland-cvt.h
+rename to hw/xwayland/xwayland-randr.h
+index 64ff41e35..16e6df5e1 100644
+--- a/hw/xwayland/xwayland-cvt.h
++++ b/hw/xwayland/xwayland-randr.h
+@@ -20,15 +20,14 @@
+  * OTHER DEALINGS IN THE SOFTWARE.
+  */
+ 
+-#ifndef XWAYLAND_CVT_H
+-#define XWAYLAND_CVT_H
++#ifndef XWAYLAND_RANDR_H
++#define XWAYLAND_RANDR_H
+ 
+ #include <xwayland-config.h>
+ 
+ #include <dix.h>
+ #include <randrstr.h>
+ 
+-RRModePtr xwayland_cvt(int HDisplay, int VDisplay,
+-                       float VRefresh, Bool Reduced, Bool Interlaced);
++RRModePtr xwayland_randr_mode(int HDisplay, int VDisplay, float VRefresh, Bool Reduced, Bool Interlaced);
+ 
+-#endif /* XWAYLAND_CVT_H */
++#endif /* XWAYLAND_RANDR_H */
+-- 
+2.45.2
+

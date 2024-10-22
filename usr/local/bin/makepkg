@@ -1,0 +1,2 @@
+#!/bin/bash
+chrt -i 0 /usr/bin/makepkg "$@"

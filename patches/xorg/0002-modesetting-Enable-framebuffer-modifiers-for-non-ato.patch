@@ -1,0 +1,56 @@
+From 968e57f0c08a1b1fa8fd18da7646ec66cc8cf41e Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Wed, 24 Jul 2024 06:37:19 +0200
+Subject: [PATCH 2/2] modesetting: Enable framebuffer modifiers for non-atomic
+
+---
+ hw/xfree86/drivers/modesetting/driver.c | 7 +++++--
+ hw/xfree86/drivers/modesetting/driver.h | 1 +
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/hw/xfree86/drivers/modesetting/driver.c b/hw/xfree86/drivers/modesetting/driver.c
+index 8741ffe5e..e03f482e6 100644
+--- a/hw/xfree86/drivers/modesetting/driver.c
++++ b/hw/xfree86/drivers/modesetting/driver.c
+@@ -1409,12 +1409,16 @@ PreInit(ScrnInfoPtr pScrn, int flags)
+ #endif
+     }
+ 
++    ret = drmSetClientCap(ms->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
++    ms->kms_has_universal_planes = ret == 0;
++
+     /*
+      * Use "atomic modesetting disable" request to detect if the kms driver is
+      * atomic capable, regardless if we will actually use atomic modesetting.
+      * This is effectively a no-op, we only care about the return status code.
+      */
+     ret = drmSetClientCap(ms->fd, DRM_CLIENT_CAP_ATOMIC, 0);
++    ms->kms_has_universal_planes = ms->kms_has_universal_planes || ms->atomic_modeset_capable;
+     ms->atomic_modeset_capable = (ret == 0);
+ 
+     if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_ATOMIC, FALSE)) {
+@@ -1435,8 +1439,7 @@ PreInit(ScrnInfoPtr pScrn, int flags)
+                        "TearFree cannot synchronize PRIME; use 'PRIME Synchronization' instead\n");
+         } else if (ms->drmmode.glamor) {
+             /* Atomic modesetting implicitly enables universal planes */
+-            if (!ms->drmmode.pageflip || ms->atomic_modeset ||
+-                !drmSetClientCap(ms->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) {
++            if (!ms->drmmode.pageflip || ms->atomic_modeset || ms->kms_has_universal_planes) {
+                 ms->drmmode.tearfree_enable = TRUE;
+                 xf86DrvMsg(pScrn->scrnIndex, X_INFO, "TearFree: enabled\n");
+             } else {
+diff --git a/hw/xfree86/drivers/modesetting/driver.h b/hw/xfree86/drivers/modesetting/driver.h
+index 74630cac4..5398f70a2 100644
+--- a/hw/xfree86/drivers/modesetting/driver.h
++++ b/hw/xfree86/drivers/modesetting/driver.h
+@@ -135,6 +135,7 @@ typedef struct _modesettingRec {
+     Bool has_queue_sequence;
+     Bool tried_queue_sequence;
+ 
++    Bool kms_has_universal_planes;
+     Bool kms_has_modifiers;
+ 
+     /* VRR support */
+-- 
+2.45.2
+

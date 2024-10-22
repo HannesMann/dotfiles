@@ -1,0 +1,62 @@
+From 95060975b4dd70b53135bae133457a23ec050fc4 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Sun, 28 Jul 2024 04:23:01 +0200
+Subject: [PATCH 22/27] x11window: Resize at output refresh rate
+
+---
+ src/x11window.cpp | 17 +++++++++++++----
+ src/x11window.h   |  1 +
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/src/x11window.cpp b/src/x11window.cpp
+index b4e1e6bd39..97fe9d2f22 100644
+--- a/src/x11window.cpp
++++ b/src/x11window.cpp
+@@ -311,6 +311,7 @@ X11Window::X11Window()
+     m_syncRequest.lastTimestamp = xTime();
+     m_syncRequest.isPending = false;
+     m_syncRequest.interactiveResize = false;
++    m_syncRequest.ceil = false;
+ 
+     // Set the initial mapping state
+     mapping_state = Withdrawn;
+@@ -4830,12 +4831,20 @@ void X11Window::doInteractiveResizeSync(const QRectF &rect)
+         m_syncRequest.timeout->start(250);
+         sendSyncRequest();
+     } else {
+-        // For clients not supporting the XSYNC protocol, we limit the resizes to 30Hz
+-        // to take pointless load from X11 and the client, the mouse is still moved at
+-        // full speed and no human can control faster resizes anyway.
++        // For clients not supporting the XSYNC protocol, we limit the resizes to the output refresh rate.
++        // The mouse is still moved at full speed and no human can control faster resizes anyway.
+         m_syncRequest.isPending = true;
+         m_syncRequest.interactiveResize = true;
+-        m_syncRequest.timeout->start(33);
++        double refreshInterval = 1000000.0 / 30000.0;
++        if (output() && output()->refreshRate() > 0) {
++            refreshInterval = 1000000.0 / (double)output()->refreshRate();
++        }
++        if (m_syncRequest.ceil) {
++            m_syncRequest.timeout->start((int)std::ceil(refreshInterval));
++        } else {
++            m_syncRequest.timeout->start((int)std::floor(refreshInterval));
++        }
++        m_syncRequest.ceil = !m_syncRequest.ceil;
+     }
+ 
+     configure(nativeFrameGeometry, nativeWrapperGeometry, nativeClientGeometry);
+diff --git a/src/x11window.h b/src/x11window.h
+index 0a3a9e9cb0..3f34f5966a 100644
+--- a/src/x11window.h
++++ b/src/x11window.h
+@@ -287,6 +287,7 @@ public:
+         QTimer *timeout, *failsafeTimeout;
+         bool isPending;
+         bool interactiveResize;
++        bool ceil;
+     };
+     const SyncRequest &syncRequest() const
+     {
+-- 
+2.46.2
+

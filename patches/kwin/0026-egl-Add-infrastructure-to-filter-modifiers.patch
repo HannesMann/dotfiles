@@ -1,0 +1,90 @@
+From f7b199dfbea649ad28d44b697ebc64ea20326812 Mon Sep 17 00:00:00 2001
+From: Hannes Mann <hannesmann2000@gmail.com>
+Date: Thu, 22 Aug 2024 05:34:37 +0200
+Subject: [PATCH 26/27] egl: Add infrastructure to filter modifiers
+
+---
+ .../scenes/opengl/abstract_egl_backend.cpp    | 53 ++++++++++++++++++-
+ 1 file changed, 52 insertions(+), 1 deletion(-)
+
+diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
+index 2e3b49f0a9..d853ec7f87 100644
+--- a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
++++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
+@@ -24,6 +24,7 @@
+ #include "utils/drm_format_helper.h"
+ // Qt
+ #include <QOpenGLContext>
++#include <QtGlobal>
+ 
+ #include <memory>
+ 
+@@ -94,6 +95,56 @@ void AbstractEglBackend::setEglDisplay(EglDisplay *display)
+     setSupportsBufferAge(m_display->supportsBufferAge());
+ }
+ 
++enum ModifierFilter {
++    AMD_DCC = 1,
++    AMD_DCC_RETILE = 2,
++    AMD_DCC_PIPE_ALIGN = 4
++};
++
++static QList<uint64_t> filterModifiers(const QList<uint64_t> &modifiers)
++{
++    static bool checked = false;
++    static int filter = 0;
++
++    if (!checked) {
++        if (qEnvironmentVariableIsSet("KWIN_DRM_MODIFIER_FILTER")) {
++            QStringList filters = qEnvironmentVariable("KWIN_DRM_MODIFIER_FILTER").split(",");
++            if (filters.indexOf("amd_dcc") >= 0) {
++                filter |= AMD_DCC;
++            }
++            if (filters.indexOf("amd_dcc_retile") >= 0) {
++                filter |= AMD_DCC_RETILE;
++            }
++            if (filters.indexOf("amd_dcc_pipe_align") >= 0) {
++                filter |= AMD_DCC_PIPE_ALIGN;
++            }
++        }
++        checked = true;
++    }
++
++    if (filter) {
++        QList<uint64_t> filteredModifiers = {};
++
++        for (uint64_t modifier : modifiers) {
++            if ((filter & AMD_DCC) && AMD_FMT_MOD_GET(DCC, modifier)) {
++                continue;
++            }
++            if ((filter & AMD_DCC_RETILE) && AMD_FMT_MOD_GET(DCC_RETILE, modifier)) {
++                continue;
++            }
++            if ((filter & AMD_DCC_PIPE_ALIGN) && AMD_FMT_MOD_GET(DCC_PIPE_ALIGN, modifier)) {
++                continue;
++            }
++
++            filteredModifiers.append(modifier);
++        }
++
++        return filteredModifiers;
++    }
++
++    return modifiers;
++}
++
+ void AbstractEglBackend::initWayland()
+ {
+     if (!WaylandServer::self()) {
+@@ -133,7 +184,7 @@ void AbstractEglBackend::initWayland()
+                 }
+ 
+                 const bool externalOnlySupported = withExternalOnlyYUV && info && info->yuvConversion();
+-                QList<uint64_t> modifiers = externalOnlySupported ? it->allModifiers : it->nonExternalOnlyModifiers;
++                QList<uint64_t> modifiers = filterModifiers(externalOnlySupported ? it->allModifiers : it->nonExternalOnlyModifiers);
+ 
+                 if (externalOnlySupported && !modifiers.isEmpty()) {
+                     if (auto yuv = info->yuvConversion()) {
+-- 
+2.46.2
+

@@ -1,0 +1,3 @@
+#!/bin/bash
+export WAYLAND_DISPLAY=""
+/usr/bin/libreoffice "$@"
